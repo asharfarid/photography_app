@@ -1,0 +1,20 @@
+# ---- Secrets: never commit ----
+*.publishsettings
+*.secrets.json
+*parameters.local.json
+.env
+.env.*
+*.pfx
+*.key
+
+# ---- Local tooling / scratch ----
+.vscode/
+.idea/
+tmp/
+out/
+*.log
+
+# ---- OS noise ----
+Thumbs.db
+desktop.ini
+.DS_Store
