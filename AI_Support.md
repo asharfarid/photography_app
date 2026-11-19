@@ -4,7 +4,7 @@ file: AI_Support.md
 purpose: Persistent memory + decision log for AI assistant sessions
 schema_version: 1
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-08
+last_updated: 2026-11-19
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
@@ -28,9 +28,12 @@ it is optimized for machine re-hydration.
 6. Update `last_updated` in the front matter on every write.
 7. Modify only files under `repo_root`. Never touch global git config, user profile
    files, or anything outside this folder unless the user explicitly asks.
-8. Commit after every meaningful change (`git add -A && git commit -m "..."`).
+8. Commit at **milestones only** (`git add -A && git commit -m "..."`), not every
+   experiment — the owner does not want exhaustive version control.
 9. Keep this file under ~400 lines. If it grows, compress §9 older entries into
    one-line summaries — but never delete a Sure_Point or a changelog row.
+10. **Plain language, always (SP-11).** The owner is an Azure admin, not a
+    developer. No unexplained jargon; define any necessary term in one line.
 
 ---
 
@@ -38,18 +41,25 @@ it is optimized for machine re-hydration.
 
 | Field | Value |
 |---|---|
-| Goal | Publicly reachable, HTTPS photography showcase on Azure |
+| Goal | Publicly reachable, HTTPS **photo community** on Azure: owner's gallery first, community later |
+| Product model | "A shop": shop floor = the app; warehouse = one storage account. Read-only showcase now |
+| Stage 1 scope | **Read-only gallery of the owner's work**, public, no logins, no uploads — "we are open" |
+| Later stages | Stage 2 member accounts + uploads; Stage 3 events/contests with voting |
 | Owner intent | Learning-first: understand Azure deeply for an **AZ-104 / cloud admin interview**, not just ship a site |
-| Subscription | Free/student subscription; Method A track converts the **same** subscription to pay-as-you-go |
-| Cost ceiling | **₹10–50 per month (~$0.12–0.60)** for the running showcase |
-| Audience | ~**20 known visitors per month**, arriving only when the owner shares the link |
+| Subscription | Free/student subscription; will convert the **same** subscription to pay-as-you-go |
+| Cost | Stage 1 target **₹10–50/month**; app stages cost more and get their own measured line |
+| Audience | ~**20 known visitors per month** at launch, arriving only when the owner shares the link |
 | Domain | **None purchased** — Azure-provided hostnames only |
-| Data home | **One** Azure Storage account holds site + photos + metadata |
+| Data home | **One** Azure Storage account, three data areas, containers as needed (SP-8) |
+| Hosting | **Not decided** — hands-on bake-off, instinct-driven (SP-9) |
+| Reference sites | anseladams.com, jimmychin.com, artwolfe.com (look/feel), gurushots.com (events) |
 | Working dir | `C:\Stagging\AZ104_free_sub_project\Photography_app` (Windows, pwsh, git 2.54) |
-| Session date baseline | 2026-11-05 → 2026-11-08 |
 
-Non-goals (v1): custom domain, CDN/Front Door, database, user accounts, public
-self-service upload, SEO/marketing, multi-region.
+Non-goals near term: custom domain, CDN/Front Door, microservices, native mobile
+app, payments, SEO/marketing, multi-region.
+
+The ₹10–50 ceiling (SP-4) applies to **read-only Stage 1**. Stage 2+ exceeds it;
+each stage gets a measured cost figure before launch.
 
 ---
 
@@ -63,14 +73,22 @@ self-service upload, SEO/marketing, multi-region.
 | SP-4 | Running cost must stay **₹10–50/month**; ~20 known visitors/month | Free-credit discipline; egress and tier choices are designed around it | 2026-11-08 |
 | SP-5 | Method B = **full 3-tier on VMs**, repeatedly built and torn down during the free month, for architect-level learning | Deliberate lab, not production; IaaS breadth for interviews | 2026-11-08 |
 | SP-6 | IaC is **on hold**; small per-lab templates only later, as DevOps/Terraform learning | User wants understanding first, then automation | 2026-11-08 |
+| SP-7 | **One app (monolith) + separate storage.** The app never stores photos on its own disk | Owner requirement: images live apart from the app; app only presents them | 2026-11-19 |
+| SP-8 | Storage keeps **three data areas**: owner photos (`your-photos` + private `originals`), member photos (`members-photos`), app records (`app-data`) | Clear separation of owner content, member content, records; masters need their own private container | 2026-11-19 |
+| SP-9 | **Hosting service is NOT locked.** Hands-on bake-off; instinct decides; no App Service default | Owner will learn by trying; premature lock rejected | 2026-11-19 |
+| SP-10 | Product is a **staged photo community**: Stage 1 owner gallery (read-only) → Stage 2 accounts/uploads → Stage 3 events/voting | "Stage then scale"; each stage ships only when the previous works | 2026-11-19 |
+| SP-11 | **Plain language only.** Define any unavoidable term in one line; no developer jargon | Owner is an admin, not a developer | 2026-11-19 |
 
 Derived constraints (consequences, not new decisions):
 
-- Storage account must be **Standard GPv2, LRS, hierarchical namespace OFF**
-  (static website hosting is unsupported on ADLS Gen2).
-- No Azure DNS zone, no App Service certificate, no custom-domain binding.
-- Method A runs no compute → no idle spend.
-- Method B must be built with **auto-shutdown / delete-by-default** habits.
+- **Stage 1 runs no compute** (static website) so it stays inside SP-4.
+- Storage account: **Standard GPv2, LRS, hierarchical namespace OFF** (needed for
+  static website hosting).
+- No Azure DNS zone, no certificate purchase, no custom-domain binding.
+- Monolith: whatever host is chosen must run **one app**, not many services.
+- Photo files never sit on app storage; the app holds code and settings only.
+- Every lab is **delete-by-default** (auto-shutdown for VMs).
+- Git: commit at **milestones only**, not every experiment (owner preference).
 
 ---
 
@@ -80,88 +98,94 @@ Derived constraints (consequences, not new decisions):
 |---|---|---|---|---|
 | OD-1 | Azure region | `centralindia` / `southeastasia` / `eastus` | OPEN | closest-to-audience + cheapest; confirm before any deploy |
 | OD-2 | Naming prefix + tag set | e.g. `ashphoto`, tags `env`, `owner`, `purpose` | OPEN | short, globally-unique-safe prefix |
-| OD-3 | Any server-side behaviour in v1? | none / contact form / search / client-proofed galleries | OPEN | none (keeps ₹0 compute) |
-| OD-4 | Image publish pipeline | local script (PowerShell/Python) vs GitHub Actions | OPEN | local script first |
-| OD-5 | Hotlink / abuse posture | accept public blob reads vs Front Door/Referer check later | OPEN | accept in v1, revisit if traffic appears |
-| OD-6 | Landing-zone template timing | now vs after Method A is hand-built and understood | OPEN | after Method A works manually |
+| OD-3 | Any server-side behaviour? | none in Stage 1 / accounts+uploads in Stage 2 | **DECIDED 2026-11-19** | Stage 1 none; Stage 2 yes |
+| OD-4 | Image publish pipeline | local script vs automated | OPEN | local script first |
+| OD-5 | Hotlink / abuse posture | accept public reads vs Front Door/Referer check later | OPEN | accept in Stage 1, revisit if traffic appears |
+| OD-6 | Landing-zone template timing | now vs after Stage 1 is hand-built | OPEN | after Stage 1 works manually |
 | OD-7 | Template authoring style | hand-written ARM JSON vs Bicep compiled to JSON | OPEN | Bicep source + committed `azuredeploy.json` |
-| OD-8 | Front-end stack | vanilla HTML/CSS/JS vs static site generator | OPEN | vanilla + build-time JSON manifest |
+| OD-8 | Look and feel | reference sites: anseladams / jimmychin / artwolfe | OPEN | big single photo, simple menu, work grouped in collections |
 | OD-9 | Originals tier | Cool vs Archive | OPEN | **Cool** (Archive retrieval latency/cost not worth it) |
 | OD-10 | Off-machine backup | private GitHub remote vs none | OPEN | add later; local `.git` is not a backup |
 | OD-11 | VM lab component list | LB, 2× web VMs, DB host, NSGs, Bastion?, NAT? | OPEN | Basic LB (free) + B1s VMs + DB on VM to stay in grant |
-| OD-12 | Photo metadata store | generated JSON manifest vs Table Storage | OPEN | JSON manifest (no runtime dependency) |
-| OD-13 | Gallery image sizing | thumbnail + lightbox renditions, exact px/format | OPEN | ~400px WebP thumb, ~1600px WebP lightbox |
+| OD-12 | Photo list format | one generated file vs Table Storage | OPEN | one generated file (no runtime dependency) |
+| OD-13 | Image sizes | thumbnail + viewing size, exact pixels | OPEN | ~400px WebP thumb, ~1600px viewing |
+| OD-14 | Hosting bake-off shortlist | App Service / Container Apps / VMs / Functions / static | OPEN | hands-on testing, instinct decides (SP-9) |
+| OD-15 | Member accounts | Entra External ID vs own sign-up vs social login | OPEN | Stage 2 only |
+| OD-16 | Records store (database) | Azure SQL free offer vs Cosmos free tier vs Table Storage | OPEN | Stage 2 only; pick by cost + effort |
+| OD-17 | Member upload rules | size/format limits, moderation, per-user quota | OPEN | Stage 2 only |
 
 ---
 
-## 4. Chosen architecture — v1 (Method A)
+## 4. Architecture (staged: app + separate storage)
+
+**Stage 1 — read-only showcase (no app, no logins).**
 
 ```
-                        HTTPS (Azure default hostname)
-                                    |
-                    <account>.z##.web.core.windows.net
-                                    |
-        +---------------------------+---------------------------+
-        |            Storage Account (GPv2, LRS, no HNS)        |
-        |                                                       |
-        |  $web            public  static site + thumbnails     |
-        |  photos          public  web renditions (WebP)        |
-        |  originals       private full-res masters (Cool)      |
-        |  data            public  gallery manifest JSON        |
-        +-------------------------------------------------------+
+Visitor --HTTPS--> Storage static website address
+                      |
+                      +-- $web        : pages, styles, thumbnails
+                      +-- your-photos : viewing-size images (public)
+                      +-- originals   : full-size masters (private, Cool tier)
+                      +-- app-data    : photo list + captions (one file)
+```
+
+**Stage 2+ — community (one app, storage kept separate).**
+
+```
+Visitor --HTTPS--> App (single app; host TBD) --reads/writes--> Storage account
+                                                                  |-- your-photos
+                                                                  |-- members-photos
+                                                                  |-- app-data (records)
 ```
 
 Design rules:
 
-- **Two-tier images:** small WebP thumbnails in the grid, ~1600px rendition in the
-  lightbox. Masters never served. This is the egress control.
-- **Originals in Cool**, web renditions in Hot.
-- **Content-hashed filenames** + `Cache-Control: public, max-age=31536000, immutable`.
-- **EXIF/GPS stripped** on publish (privacy); masters keep EXIF.
-- Custom **404 page** via static website `errorDocument404Path`.
-- No JS framework, no API, no database. Gallery manifest is a build artifact.
-- Publish is a **local script**, not a web portal.
+- The app never keeps photos; it only gives visitors a link.
+- One app, one deployment, three internal rooms (owner, members, events). Split
+  only if evidence demands it.
+- Database choice deferred to Stage 2 (OD-16).
+- Stage 1 stays inside ₹10–50/month; each later stage gets a measured cost line.
+- Two image sizes: thumbnail for browsing, ~1600px for viewing. Masters private.
+- Remove camera location data before publishing (privacy).
+- Publish is a local script, not a web portal.
 
-Deferred until justified: Front Door Standard (~$35/mo base — rejected for now),
-Functions API, SWA, Entra-protected upload portal, Log Analytics.
+Deferred until justified: Front Door, Log Analytics, microservices.
 
 ---
 
 ## 5. Roadmap
 
-**Phase 0 — foundations (current)**
+**Stage 0 — foundations (done)**
 - [x] Record Sure_Points and open decisions in this file
 - [x] `git init` the project folder
+- [x] Lock product shape, architecture, and staging (SP-7..SP-11)
+
+**Stage 1 — read-only gallery, public launch (NEXT)**
 - [ ] Answer OD-1 (region) and OD-2 (naming/tags)
+- [ ] Manually create storage account in portal; enable static website
+- [ ] Create containers; upload a hello-world page; confirm the HTTPS address
+- [ ] Choose the look from the reference sites (OD-8)
+- [ ] Build the pages + the photo list file
+- [ ] Publish script: resize, remove location data, upload
+- [ ] Create budget alert + lifecycle rule for originals
+- [ ] Share the link with the 20 people
 
-**Phase 1 — Method A: the real showcase**
-- [ ] Manually create storage account + static website in portal (learning, no template)
-- [ ] Build gallery HTML/CSS/JS + manifest generator
-- [ ] Publish pipeline: resize → WebP → strip EXIF → `azcopy`
-- [ ] Budget + alert, lifecycle rule, cache headers
-- [ ] Verify HTTPS URL on the default storage endpoint
+**Stage 2 — members (later)**
+- [ ] Hosting bake-off, hands-on (OD-14); decide by instinct
+- [ ] Accounts (OD-15) and records store (OD-16)
+- [ ] Upload with limits/moderation (OD-17)
 
-**Phase 2 — cost/ops hardening**
-- [ ] Confirm monthly spend inside ₹10–50 for 2 billing cycles
-- [ ] Document measured costs in §6
-- [ ] Hotlink-abuse check only if traffic materializes
+**Stage 3 — events (later)**
+- [ ] Contests, entries, voting, results
 
-**Phase 3 — Method B: 3-tier VM lab**
-- [ ] VNet + subnets + NSGs
-- [ ] 2× B1s web VMs (free-account 750 h/mo grant) + Basic LB (free)
-- [ ] DB on a VM (avoid paid PaaS SQL)
-- [ ] Auto-shutdown; delete resource group after each experiment
-- [ ] Capture screenshots/notes for interview stories
-
-**Phase 4 — optional breadth**
-- [ ] App Service F1 alternative rendering the same library
-- [ ] Functions consumption API (contact/search)
-- [ ] Static Web Apps comparison
-- [ ] Small ARM/Bicep templates per lab (resumes SP-6 learning track)
+**Lab track — parallel, delete-by-default**
+- [ ] 3-tier VM lab (SP-5)
+- [ ] App Service / Container Apps / Functions comparisons
+- [ ] Small templates only if a lab needs them (SP-6)
 
 ---
 
-## 6. Cost model (Method A, ~₹85/$)
+## 6. Cost model — Stage 1 (~₹85/$)
 
 | Item | Volume | Unit price | Monthly |
 |---|---|---|---|
@@ -234,19 +258,20 @@ Photography_app\
 ├── .gitignore                secrets, scratch, OS noise
 ├── AI_Support.md             THIS FILE — AI memory + decision log (AI-written)
 ├── Master_landing_zone_v1\   reserved for subscription-scope ARM (empty; on hold)
-├── labs\                     (planned) per-method implementations
-│   ├── 01-storage-static\    Method A — the real showcase
-│   ├── 02-app-service-f1\    later comparison
+├── labs\                     (planned) per-option implementations
+│   ├── 01-storage-static\    Stage 1 — read-only gallery
+│   ├── 02-app-service-f1\    hosting bake-off candidate
 │   ├── 03-functions-api\     later, optional dynamic bits
-│   ├── 04-vm-3tier\          Method B — architect lab
-│   └── 05-static-web-apps\   later comparison
-├── pipeline\                 (planned) resize / EXIF strip / WebP / azcopy
+│   ├── 04-vm-3tier\          architect lab (SP-5)
+│   └── 05-static-web-apps\   hosting bake-off candidate
+├── pipeline\                 (planned) resize / strip location data / upload
 └── docs\                     (planned) decision log exports, cost screenshots,
                               interview notes
 ```
 
 Git conventions:
-- Branch `main` is the record; commit after each meaningful step.
+- Commit at **milestones only** — not every experiment (owner preference 2026-11-19).
+- Branch `main` is the record.
 - Commit style: `area: what changed` (e.g. `site: add gallery manifest generator`).
 - Exported actual-state JSON **is** committed — that is the drift timeline.
 - Repo-local identity is set (`ashar` / `ashar@local`); global git config untouched.
@@ -277,19 +302,34 @@ Git conventions:
   from committed exports, safe lab teardown/restore. Not an off-machine backup.
 - Ran `git init -b main`, set repo-local identity, wrote `.gitignore` and this file.
 
+### 2026-11-19 — Session 3: product shape + staged architecture
+- Owner rejected "portfolio only": the goal is a community platform — owner's work,
+  member posts, and events (GuruShots-style). Reference sites: anseladams.com,
+  jimmychin.com, artwolfe.com.
+- Agreed staged delivery: Stage 1 read-only gallery → Stage 2 accounts + member
+  uploads → Stage 3 events/voting. "Stage then scale."
+- Locked SP-7..SP-11: one app + separate storage in three data areas; hosting
+  NOT locked (hands-on bake-off, instinct); staged product; plain-language rule.
+- Corrections: monolith describes the app code, not data location — storage stays
+  separate (owner's requirement). Owner does not want exhaustive version control;
+  commits at milestones only.
+- Stage 1 confirmed: read-only, world-visible, no logins.
+
 ---
 
 ## 10. Next actions
 
 - [ ] **NA-1** Answer OD-1 (region) and OD-2 (prefix/tags)
-- [ ] **NA-2** Manually build Method A in the portal: storage account (GPv2/LRS/no HNS),
-      enable static website, create containers, upload a hello-world `index.html`
-- [ ] **NA-3** Verify the `*.web.core.windows.net` HTTPS URL loads
-- [ ] **NA-4** Design gallery manifest schema + build the front end
-- [ ] **NA-5** Write publish script (resize, WebP, EXIF strip, azcopy, cache headers)
-- [ ] **NA-6** Create budget + alert at ₹100; add lifecycle rule for originals
-- [ ] **NA-7** Convert subscription to pay-as-you-go and verify first invoice delta
-- [ ] **NA-8** Start Method B lab plan (OD-11) and note AZ-104 objectives per component
+- [ ] **NA-2** Manually create the storage account in the portal (GPv2/LRS/no HNS),
+      enable static website, create the containers (site, photos, private masters, records)
+- [ ] **NA-3** Upload a hello-world page and confirm the HTTPS address loads
+- [ ] **NA-4** Pick the look from the references (OD-8); sketch pages in plain words
+- [ ] **NA-5** Build the pages + the photo list file
+- [ ] **NA-6** Write the publish script (resize, remove location data, upload)
+- [ ] **NA-7** Create budget alert at ₹100; add lifecycle rule for originals
+- [ ] **NA-8** Convert subscription to pay-as-you-go; check the first invoice delta
+- [ ] **NA-9** Launch: share the read-only link with the initial 20 people
+- [ ] **NA-10** Prepare the Stage 2 hosting bake-off (OD-14) and 3-tier VM lab (SP-5)
 
 ---
 
@@ -314,6 +354,12 @@ Git conventions:
 | Idempotent | Re-running produces the same end state (Incremental mode) |
 | Subscription-scope deployment | Template that can create RGs, budgets, policy, RBAC |
 | Auto-shutdown | Dev/Test schedule that stops a VM nightly to protect credit |
+| Monolith | One app containing all features (the chosen shape, SP-7) |
+| Microservices | Many small apps, each separate (not chosen) |
+| Container (storage) | A folder inside a storage account |
+| Database | A filing cabinet for records: users, captions, votes |
+| App Service | Azure's managed place to run a web app |
+| Static website | Plain files served directly by storage; no app running |
 
 ---
 
@@ -323,3 +369,4 @@ Git conventions:
 |---|---|---|
 | 2026-11-08 | Created file; seeded §0–§12 from Sessions 1–2 | Persist context across chats/models/reinstalls |
 | 2026-11-08 | `git init -b main`, `.gitignore`, initial commit | Tamper-proof history + drift timeline |
+| 2026-11-19 | Locked SP-7..SP-11; restructured architecture/roadmap | Product changed from portfolio to staged community platform; hosting left open |
