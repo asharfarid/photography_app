@@ -4,7 +4,7 @@ file: AI_Support.md
 purpose: Persistent memory + decision log for AI assistant sessions
 schema_version: 2
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
@@ -74,6 +74,7 @@ SEO/marketing, multi-region.
 | SP-10 | **Staged product**: Stage 1 read-only gallery → Stage 2 accounts/uploads → Stage 3 events | ACTIVE | 2026-11-19 |
 | SP-11 | **Plain language only**; define any unavoidable term in one line | ACTIVE | 2026-11-19 |
 | SP-12 | **Least monthly cost is the standing rule.** No fixed ceiling; every service's cost is reviewed before finalizing | ACTIVE | 2026-11-22 |
+| SP-13 | **Stage 1 front end is hand-written HTML/CSS/JS.** No React/Next.js in Stage 1; revisit only if Stage 2 needs it | ACTIVE | 2026-11-23 |
 
 Derived constraints (consequences, not new decisions):
 
@@ -113,8 +114,18 @@ Derived constraints (consequences, not new decisions):
 | `OD-C6` | Image sizes | OPEN | ~400px thumbnail, ~1600px viewing |
 | `OD-C7` | Member upload rules | OPEN | size/format limits, moderation, per-user quota — Stage 2 |
 | `OD-C8` | IaC timing/style, when SP-6 lifts | OPEN | subscription-scope template vs Bicep |
+| `OD-C9` | Image layout + URL paths | OPEN | viewing images under `$web/images/...` so local and cloud paths match; lowercase, hyphens, no spaces; relative paths only |
 
 Old flat IDs `OD-1…OD-17` were folded into these groups on 2026-11-22.
+
+### 3.3 Rejected options (do not re-suggest without new evidence)
+
+| Option | Why rejected | Date |
+|---|---|---|
+| WordPress (both .com and self-hosted) | Large attack surface, plugin patching, ~₹2,000+/mo; free .com plan can't do members/contests | 2026-11-23 |
+| Wix / Squarespace | Not Azure; monthly cost; limited control | 2026-11-23 |
+| Microservices | One-person project; adds cost and failure points (SP-7) | 2026-11-19 |
+| Next.js server (Node on server in Stage 1) | Extra machinery, no Stage 1 benefit | 2026-11-23 |
 
 ---
 
@@ -150,6 +161,9 @@ Design rules:
 - Two image sizes: thumbnail for browsing, ~1600px for viewing. Masters private.
 - Remove camera location data before publishing (privacy).
 - Publish is a local script, not a web portal.
+- **Paths:** relative only (`images/nature/x.jpg`), never `C:\...`. Lowercase,
+  hyphens, no spaces — cloud storage is case-sensitive, Windows is not.
+- Keep local folders and cloud folders identical so hosting changes no code.
 
 Deferred until justified: Front Door, Log Analytics, microservices.
 
@@ -162,11 +176,14 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 
 **Stage 1 — read-only gallery, public launch (NEXT)**
 - [ ] Answer `OD-C1` (region) and `OD-C2` (naming/tags)
+- [ ] **Build a rough homepage as the sketch** — real photos, real components,
+      minimal styling. The homepage *is* the plan, not paper.
+- [ ] Agree the component list from that homepage (nav, grid, footer, etc.)
 - [ ] Pick the Stage 1 host from `OD-H` (hands-on test)
 - [ ] Create the storage account; containers for site, photos, private masters, records
-- [ ] Upload a hello-world page; confirm the HTTPS address
-- [ ] Choose the look (`OD-C3`); build pages + photo list
+- [ ] Move the homepage to the host; confirm the HTTPS address
 - [ ] Publish script: resize, remove location data, upload
+- [ ] Finishing styles (`OD-C3`) after the structure is agreed
 - [ ] Budget alert (safety, not a locked ceiling)
 - [ ] Share the link with the initial 20 people
 
@@ -236,6 +253,7 @@ Photography_app\
 ├── .git\                     local history (not a backup)
 ├── .gitignore                secrets, scratch, OS noise
 ├── AI_Support.md             THIS FILE — AI memory + decision log
+├── temp.txt                  project brief for external AI review (untracked)
 ├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
 ├── labs\                     (planned) per-candidate builds
 │   ├── 01-storage-static\    hosting candidate
@@ -284,20 +302,34 @@ Git conventions:
   decisions (`OD-C1…C8`); old OD-1…OD-17 folded in.
 - Clarified service vs microservice for the owner.
 
+### 2026-11-23 — Session 5: runtime + build approach
+- Reviewed a second opinion (ChatGPT) recommending React + Vite + JavaScript,
+  Stage 1 static, Node only at Stage 2. Agreed with most of it; rejected starting
+  with React because Stage 1 is read-only and security/simplicity matter more.
+- **SP-13 locked:** Stage 1 is hand-written HTML/CSS/JS. React is optional at Stage 2.
+- Explained HTML is unavoidable; React/Node are optional producers of it.
+- **Path rule agreed:** relative paths, lowercase, hyphens, no spaces; keep local
+  and cloud folders identical (`OD-C9`).
+- WordPress and Wix formally rejected (`§3.3`).
+- Build approach agreed: the **rough homepage is the sketch** — real photos, real
+  components, styling last. No paper plan.
+- `temp.txt` written for an external second opinion (untracked).
+
 ---
 
 ## 10. Next actions
 
 - [ ] **NA-1** Answer `OD-C1` (region) and `OD-C2` (naming/tags)
-- [ ] **NA-2** Test Stage 1 host candidates from `OD-H`; note cost/effort
-- [ ] **NA-3** Create storage account + containers (site, photos, masters, records)
-- [ ] **NA-4** Upload hello-world page; confirm HTTPS address
-- [ ] **NA-5** Pick the look (`OD-C3`); build pages + photo list
-- [ ] **NA-6** Publish script (resize, remove location data, upload)
-- [ ] **NA-7** Budget alert + lifecycle rule
-- [ ] **NA-8** Convert subscription to pay-as-you-go; check first invoice
-- [ ] **NA-9** Launch read-only link with the initial 20 people
-- [ ] **NA-10** Prepare Stage 2 (`OD-I`, `OD-R`) and the 3-tier VM lab (SP-5)
+- [ ] **NA-2** Build the rough homepage as the sketch (HTML/CSS/JS, real photos)
+- [ ] **NA-3** Agree the component list from the homepage
+- [ ] **NA-4** Test Stage 1 host candidates from `OD-H`; note cost/effort
+- [ ] **NA-5** Set up the storage account + folder layout (`OD-C9`)
+- [ ] **NA-6** Move the homepage to the chosen host; confirm HTTPS
+- [ ] **NA-7** Publish script (resize, remove location data, upload)
+- [ ] **NA-8** Finishing styles (`OD-C3`); budget alert + lifecycle rule
+- [ ] **NA-9** Convert subscription to pay-as-you-go; check first invoice
+- [ ] **NA-10** Launch read-only link with the initial 20 people
+- [ ] **NA-11** Prepare Stage 2 (`OD-I`, `OD-R`) and the 3-tier VM lab (SP-5)
 
 ---
 
@@ -317,6 +349,8 @@ Git conventions:
 | Budget | Cost Management object with alert thresholds |
 | ARM template | Declarative JSON describing desired Azure state |
 | Bicep | Language that compiles to ARM JSON |
+| Vite | Free tool that bundles front-end files for publishing |
+| Relative path | A path starting from the site folder (`images/x.jpg`), not `C:\...` |
 | `what-if` | Dry-run diff of a deployment against current state |
 | Drift | Difference between desired (template) and actual (deployed) state |
 | Idempotent | Re-running produces the same end state |
@@ -333,3 +367,4 @@ Git conventions:
 | 2026-11-08 | `git init`, `.gitignore`, initial commit | Tamper-proof history + drift timeline |
 | 2026-11-19 | Locked SP-7..SP-11; staged architecture | Product changed to community platform |
 | 2026-11-22 | SP-3, SP-4 retired; SP-1 tightened; SP-12 added; §3 regrouped (`OD-H…`, `OD-C…`); schema v2 | Contradiction review + owner wants services grouped; old OD-1…OD-17 folded into groups |
+| 2026-11-23 | SP-13 added (HTML/CSS/JS); `OD-C9` paths; rejected options; homepage-is-the-sketch approach | Runtime decision + build approach settled |
