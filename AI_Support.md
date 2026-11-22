@@ -2,38 +2,36 @@
 project: Photography_app
 file: AI_Support.md
 purpose: Persistent memory + decision log for AI assistant sessions
-schema_version: 1
+schema_version: 2
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-19
+last_updated: 2026-11-22
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
 # AI_Support
 
 Single source of truth for context that must survive a new chat, a different model,
-an OpenCode reinstall, or a restored disk. Humans are not expected to read this file;
-it is optimized for machine re-hydration.
+an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 
 ---
 
 ## 0. How to use this file (instructions for future AI sessions)
 
 1. Read §0–§3 before answering anything. Do not assume prior context exists.
-2. **§2 Sure_Points are locked.** Never re-litigate, soften, or silently change them.
-   New certainties are *appended* with the next free `SP-n` id and a dated log entry.
-3. §3 Open decisions are fair game for discussion — move an item to DECIDED only when
-   the user explicitly says so, and record the rationale.
-4. Append to §9 Conversation log; never rewrite or reorder past entries.
-5. Preserve existing IDs (`SP-n`, `OD-n`, `NA-n`). Never renumber.
+2. **§2 Sure_Points are locked.** Never re-litigate or silently change them. A
+   decision that is reversed is marked **RETIRED** with a date and reason — never
+   deleted. New certainties get the next free `SP-n`.
+3. §3 is grouped by service type (`OD-H`, `OD-I`, …). Move an item to DECIDED only
+   when the owner explicitly says so, and record why.
+4. Append to §9; never rewrite or reorder past entries (older ones may be compressed).
+5. Preserve IDs. Grouped IDs (`OD-H`, `OD-C1`) are allowed; never renumber.
 6. Update `last_updated` in the front matter on every write.
-7. Modify only files under `repo_root`. Never touch global git config, user profile
-   files, or anything outside this folder unless the user explicitly asks.
-8. Commit at **milestones only** (`git add -A && git commit -m "..."`), not every
-   experiment — the owner does not want exhaustive version control.
-9. Keep this file under ~400 lines. If it grows, compress §9 older entries into
-   one-line summaries — but never delete a Sure_Point or a changelog row.
-10. **Plain language, always (SP-11).** The owner is an Azure admin, not a
-    developer. No unexplained jargon; define any necessary term in one line.
+7. Modify only files under `repo_root`. Never touch global git config or anything
+   outside this folder unless explicitly asked.
+8. Commit at **milestones only** — not every experiment.
+9. Keep this file under ~400 lines; compress old log entries, never delete SPs.
+10. **Plain language, always (SP-11).** Owner is an Azure admin, not a developer.
+    Define any unavoidable term in one line.
 
 ---
 
@@ -41,95 +39,101 @@ it is optimized for machine re-hydration.
 
 | Field | Value |
 |---|---|
-| Goal | Publicly reachable, HTTPS **photo community** on Azure: owner's gallery first, community later |
-| Product model | "A shop": shop floor = the app; warehouse = one storage account. Read-only showcase now |
-| Stage 1 scope | **Read-only gallery of the owner's work**, public, no logins, no uploads — "we are open" |
+| Goal | Publicly reachable, HTTPS **photo community** on Azure: owner's gallery first |
+| Product model | "A shop": shop floor = the app; warehouse = one storage account |
+| Stage 1 scope | **Read-only gallery of the owner's work**, public, no logins, no uploads |
 | Later stages | Stage 2 member accounts + uploads; Stage 3 events/contests with voting |
-| Owner intent | Learning-first: understand Azure deeply for an **AZ-104 / cloud admin interview**, not just ship a site |
-| Subscription | Free/student subscription; will convert the **same** subscription to pay-as-you-go |
-| Cost | Stage 1 target **₹10–50/month**; app stages cost more and get their own measured line |
-| Audience | ~**20 known visitors per month** at launch, arriving only when the owner shares the link |
-| Domain | **None purchased** — Azure-provided hostnames only |
-| Data home | **One** Azure Storage account, three data areas, containers as needed (SP-8) |
-| Hosting | **Not decided** — hands-on bake-off, instinct-driven (SP-9) |
-| Reference sites | anseladams.com, jimmychin.com, artwolfe.com (look/feel), gurushots.com (events) |
+| Owner intent | Learning-first for an **AZ-104 / cloud admin interview**, not just shipping |
+| Subscription | Free/student; will convert the **same** subscription to pay-as-you-go |
+| Cost rule | Least monthly cost wins; each service reviewed before finalizing (SP-12) |
+| Audience | ~**20 known visitors per month** at launch, shared link only |
+| Domain | **None purchased** — Azure-provided hostnames only (SP-2) |
+| Media home | **One** storage account for all photos and derivatives (SP-1) |
+| Hosting | **OPEN** — hands-on bake-off across candidates (`OD-H`) |
+| Reference sites | anseladams.com, jimmychin.com, artwolfe.com (look), gurushots.com (events) |
 | Working dir | `C:\Stagging\AZ104_free_sub_project\Photography_app` (Windows, pwsh, git 2.54) |
 
-Non-goals near term: custom domain, CDN/Front Door, microservices, native mobile
-app, payments, SEO/marketing, multi-region.
-
-The ₹10–50 ceiling (SP-4) applies to **read-only Stage 1**. Stage 2+ exceeds it;
-each stage gets a measured cost figure before launch.
+Non-goals near term: custom domain, microservices, native mobile app, payments,
+SEO/marketing, multi-region.
 
 ---
 
-## 2. Sure_Points (LOCKED — append-only)
+## 2. Sure_Points (LOCKED — append-only; retired items stay visible)
 
-| ID | Decision | Rationale | Locked |
+| ID | Decision | State | Date |
 |---|---|---|---|
-| SP-1 | All data lives centrally in **one Azure Storage account** | Simplicity, one billing surface, one lifecycle policy | 2026-11-05 |
-| SP-2 | **No domain purchase**; use Azure default HTTPS hostname | Removes DNS zone, cert purchase, and CA/binding work entirely | 2026-11-05 |
-| SP-3 | Method A = **Storage static website** (`$web`), same subscription **converted to pay-as-you-go** | Only option that keeps everything in one storage account at ~₹0 compute | 2026-11-08 |
-| SP-4 | Running cost must stay **₹10–50/month**; ~20 known visitors/month | Free-credit discipline; egress and tier choices are designed around it | 2026-11-08 |
-| SP-5 | Method B = **full 3-tier on VMs**, repeatedly built and torn down during the free month, for architect-level learning | Deliberate lab, not production; IaaS breadth for interviews | 2026-11-08 |
-| SP-6 | IaC is **on hold**; small per-lab templates only later, as DevOps/Terraform learning | User wants understanding first, then automation | 2026-11-08 |
-| SP-7 | **One app (monolith) + separate storage.** The app never stores photos on its own disk | Owner requirement: images live apart from the app; app only presents them | 2026-11-19 |
-| SP-8 | Storage keeps **three data areas**: owner photos (`your-photos` + private `originals`), member photos (`members-photos`), app records (`app-data`) | Clear separation of owner content, member content, records; masters need their own private container | 2026-11-19 |
-| SP-9 | **Hosting service is NOT locked.** Hands-on bake-off; instinct decides; no App Service default | Owner will learn by trying; premature lock rejected | 2026-11-19 |
-| SP-10 | Product is a **staged photo community**: Stage 1 owner gallery (read-only) → Stage 2 accounts/uploads → Stage 3 events/voting | "Stage then scale"; each stage ships only when the previous works | 2026-11-19 |
-| SP-11 | **Plain language only.** Define any unavoidable term in one line; no developer jargon | Owner is an admin, not a developer | 2026-11-19 |
+| SP-1 | **All photo/media assets** — originals, viewing sizes, thumbnails, member uploads, contest entries — live in **one storage account** | ACTIVE | 2026-11-22 |
+| SP-2 | **No domain purchase**; use Azure default HTTPS hostname | ACTIVE | 2026-11-05 |
+| SP-3 | ~~Hosting = Storage static website~~ | **RETIRED** 2026-11-22 — hosting is not locked; see `OD-H` | 2026-11-08 |
+| SP-4 | ~~Running cost ceiling ₹10–50/month~~ | **RETIRED** 2026-11-22 — no fixed ceiling; replaced by SP-12 | 2026-11-08 |
+| SP-5 | **Full 3-tier VM lab**, built and torn down repeatedly, for architect-level learning | ACTIVE | 2026-11-08 |
+| SP-6 | **IaC on hold**; small per-lab templates only later, as DevOps/Terraform learning | ACTIVE | 2026-11-08 |
+| SP-7 | **One app (monolith) + separate storage.** The app never stores photos on its own disk | ACTIVE | 2026-11-19 |
+| SP-8 | Three data areas: owner photos (`your-photos` + private `originals`), member photos (`members-photos`), app records (`app-data`) | ACTIVE | 2026-11-19 |
+| SP-9 | **Hosting service NOT locked.** Hands-on bake-off; instinct decides | ACTIVE | 2026-11-19 |
+| SP-10 | **Staged product**: Stage 1 read-only gallery → Stage 2 accounts/uploads → Stage 3 events | ACTIVE | 2026-11-19 |
+| SP-11 | **Plain language only**; define any unavoidable term in one line | ACTIVE | 2026-11-19 |
+| SP-12 | **Least monthly cost is the standing rule.** No fixed ceiling; every service's cost is reviewed before finalizing | ACTIVE | 2026-11-22 |
 
 Derived constraints (consequences, not new decisions):
 
-- **Stage 1 runs no compute** (static website) so it stays inside SP-4.
-- Storage account: **Standard GPv2, LRS, hierarchical namespace OFF** (needed for
-  static website hosting).
+- Storage account: **Standard GPv2, LRS, hierarchical namespace OFF** if static
+  website is used.
 - No Azure DNS zone, no certificate purchase, no custom-domain binding.
 - Monolith: whatever host is chosen must run **one app**, not many services.
 - Photo files never sit on app storage; the app holds code and settings only.
 - Every lab is **delete-by-default** (auto-shutdown for VMs).
-- Git: commit at **milestones only**, not every experiment (owner preference).
+- Git: commit at **milestones only**.
 
 ---
 
-## 3. Open decisions
+## 3. Open decisions (grouped by service type)
 
-| ID | Question | Options | Status | Current leaning |
+### 3.1 Service groups — what we rent
+
+| ID | Service type | Candidates | Status | Notes |
 |---|---|---|---|---|
-| OD-1 | Azure region | `centralindia` / `southeastasia` / `eastus` | OPEN | closest-to-audience + cheapest; confirm before any deploy |
-| OD-2 | Naming prefix + tag set | e.g. `ashphoto`, tags `env`, `owner`, `purpose` | OPEN | short, globally-unique-safe prefix |
-| OD-3 | Any server-side behaviour? | none in Stage 1 / accounts+uploads in Stage 2 | **DECIDED 2026-11-19** | Stage 1 none; Stage 2 yes |
-| OD-4 | Image publish pipeline | local script vs automated | OPEN | local script first |
-| OD-5 | Hotlink / abuse posture | accept public reads vs Front Door/Referer check later | OPEN | accept in Stage 1, revisit if traffic appears |
-| OD-6 | Landing-zone template timing | now vs after Stage 1 is hand-built | OPEN | after Stage 1 works manually |
-| OD-7 | Template authoring style | hand-written ARM JSON vs Bicep compiled to JSON | OPEN | Bicep source + committed `azuredeploy.json` |
-| OD-8 | Look and feel | reference sites: anseladams / jimmychin / artwolfe | OPEN | big single photo, simple menu, work grouped in collections |
-| OD-9 | Originals tier | Cool vs Archive | OPEN | **Cool** (Archive retrieval latency/cost not worth it) |
-| OD-10 | Off-machine backup | private GitHub remote vs none | OPEN | add later; local `.git` is not a backup |
-| OD-11 | VM lab component list | LB, 2× web VMs, DB host, NSGs, Bastion?, NAT? | OPEN | Basic LB (free) + B1s VMs + DB on VM to stay in grant |
-| OD-12 | Photo list format | one generated file vs Table Storage | OPEN | one generated file (no runtime dependency) |
-| OD-13 | Image sizes | thumbnail + viewing size, exact pixels | OPEN | ~400px WebP thumb, ~1600px viewing |
-| OD-14 | Hosting bake-off shortlist | App Service / Container Apps / VMs / Functions / static | OPEN | hands-on testing, instinct decides (SP-9) |
-| OD-15 | Member accounts | Entra External ID vs own sign-up vs social login | OPEN | Stage 2 only |
-| OD-16 | Records store (database) | Azure SQL free offer vs Cosmos free tier vs Table Storage | OPEN | Stage 2 only; pick by cost + effort |
-| OD-17 | Member upload rules | size/format limits, moderation, per-user quota | OPEN | Stage 2 only |
+| `OD-H` | **Hosting** (where pages/app run) | Storage static website, App Service, Static Web Apps, Container Apps, VMs, Functions | OPEN | hands-on bake-off; cheapest that works; no default |
+| `OD-I` | **Identity** (login) | Entra External ID, own sign-up, social login | OPEN | Stage 2 only |
+| `OD-R` | **Records** (database) | Table Storage (same account), Azure SQL free offer, Cosmos free tier, plain file | OPEN | Stage 2; prefer living inside the storage account to honour SP-1 |
+| `OD-P` | **Image processing** (resize/thumbnails) | Local script, Functions, Container Apps job | OPEN | local script first |
+| `OD-D` | **Delivery** (speed/abuse) | None, Front Door, CDN | OPEN | none initially |
+| `OD-M` | **Monitoring & cost** | Budget alerts, Azure Monitor, Log Analytics | OPEN | budget alerts minimum |
+| `OD-E` | **Email/contact** | None, Logic Apps, third-party form | OPEN | none initially |
+
+### 3.2 Configuration decisions — settings, not services
+
+| ID | Decision | Status | Notes |
+|---|---|---|---|
+| `OD-C1` | Azure region | OPEN | `centralindia` / `southeastasia` / `eastus`; cheapest sensible |
+| `OD-C2` | Naming prefix + tags | OPEN | e.g. `ashphoto`; tags `env`, `owner`, `purpose` |
+| `OD-C3` | Look and feel | OPEN | big single photo, simple menu, work grouped in collections |
+| `OD-C4` | Original tier | OPEN | Cool likely; Archive needs long retention |
+| `OD-C5` | Off-machine backup | OPEN | private GitHub remote later; local `.git` is not a backup |
+| `OD-C6` | Image sizes | OPEN | ~400px thumbnail, ~1600px viewing |
+| `OD-C7` | Member upload rules | OPEN | size/format limits, moderation, per-user quota — Stage 2 |
+| `OD-C8` | IaC timing/style, when SP-6 lifts | OPEN | subscription-scope template vs Bicep |
+
+Old flat IDs `OD-1…OD-17` were folded into these groups on 2026-11-22.
 
 ---
 
-## 4. Architecture (staged: app + separate storage)
+## 4. Architecture (app + separate storage, staged)
 
-**Stage 1 — read-only showcase (no app, no logins).**
+**Stage 1 — read-only showcase (host TBD via `OD-H`).**
 
 ```
-Visitor --HTTPS--> Storage static website address
+Visitor --HTTPS--> Stage 1 host (TBD)
                       |
-                      +-- $web        : pages, styles, thumbnails
-                      +-- your-photos : viewing-size images (public)
-                      +-- originals   : full-size masters (private, Cool tier)
-                      +-- app-data    : photo list + captions (one file)
+                      v
+                Storage account (fixed, SP-1)
+                  |-- $web        : pages, styles, thumbnails
+                  |-- your-photos : viewing-size images (public)
+                  |-- originals   : full-size masters (private, Cool)
+                  |-- app-data    : photo list + captions (one file)
 ```
 
-**Stage 2+ — community (one app, storage kept separate).**
+**Stage 2+ — community (one app, storage separate).**
 
 ```
 Visitor --HTTPS--> App (single app; host TBD) --reads/writes--> Storage account
@@ -140,11 +144,9 @@ Visitor --HTTPS--> App (single app; host TBD) --reads/writes--> Storage account
 
 Design rules:
 
-- The app never keeps photos; it only gives visitors a link.
-- One app, one deployment, three internal rooms (owner, members, events). Split
-  only if evidence demands it.
-- Database choice deferred to Stage 2 (OD-16).
-- Stage 1 stays inside ₹10–50/month; each later stage gets a measured cost line.
+- The app never keeps photos; it only hands out links.
+- One app, three internal rooms (owner, members, events). Split later only with evidence.
+- Database choice deferred to Stage 2 (`OD-R`).
 - Two image sizes: thumbnail for browsing, ~1600px for viewing. Masters private.
 - Remove camera location data before publishing (privacy).
 - Publish is a local script, not a web portal.
@@ -156,24 +158,21 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 ## 5. Roadmap
 
 **Stage 0 — foundations (done)**
-- [x] Record Sure_Points and open decisions in this file
-- [x] `git init` the project folder
-- [x] Lock product shape, architecture, and staging (SP-7..SP-11)
+- [x] Memory file, git repo, product shape, service-group decisions
 
 **Stage 1 — read-only gallery, public launch (NEXT)**
-- [ ] Answer OD-1 (region) and OD-2 (naming/tags)
-- [ ] Manually create storage account in portal; enable static website
-- [ ] Create containers; upload a hello-world page; confirm the HTTPS address
-- [ ] Choose the look from the reference sites (OD-8)
-- [ ] Build the pages + the photo list file
+- [ ] Answer `OD-C1` (region) and `OD-C2` (naming/tags)
+- [ ] Pick the Stage 1 host from `OD-H` (hands-on test)
+- [ ] Create the storage account; containers for site, photos, private masters, records
+- [ ] Upload a hello-world page; confirm the HTTPS address
+- [ ] Choose the look (`OD-C3`); build pages + photo list
 - [ ] Publish script: resize, remove location data, upload
-- [ ] Create budget alert + lifecycle rule for originals
-- [ ] Share the link with the 20 people
+- [ ] Budget alert (safety, not a locked ceiling)
+- [ ] Share the link with the initial 20 people
 
 **Stage 2 — members (later)**
-- [ ] Hosting bake-off, hands-on (OD-14); decide by instinct
-- [ ] Accounts (OD-15) and records store (OD-16)
-- [ ] Upload with limits/moderation (OD-17)
+- [ ] Identity (`OD-I`), records (`OD-R`), upload rules (`OD-C7`)
+- [ ] Hosting decision finalized from the bake-off
 
 **Stage 3 — events (later)**
 - [ ] Contests, entries, voting, results
@@ -185,68 +184,48 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 
 ---
 
-## 6. Cost model — Stage 1 (~₹85/$)
+## 6. Cost — illustrative only (if Storage static website is chosen)
+
+No locked ceiling (SP-4 retired). Least-cost option wins; measure each service.
 
 | Item | Volume | Unit price | Monthly |
 |---|---|---|---|
-| Web renditions — Hot LRS | ~3 GB | ~$0.018/GB | ~₹5 |
-| Originals — **Cool** LRS | ~30 GB | ~$0.010/GB | ~₹26 |
+| Viewing images — Hot LRS | ~3 GB | ~$0.018/GB | ~₹5 |
+| Originals — Cool LRS | ~30 GB | ~$0.010/GB | ~₹26 |
 | Transactions | ~20 visitors | negligible | <₹1 |
 | Egress | ~60 MB (first 100 GB/mo free) | $0 | ₹0 |
-| **Estimated total** | | | **~₹32** ✅ |
+| **Example total** | | | **~₹32** |
 
 Guardrails:
-- Budget alert at **₹100** (hard ceiling vs expected ~₹32).
-- Lifecycle rule: move originals Hot→Cool; never auto-delete masters.
-- **Early deletion fees:** Cool = 30-day minimum, Archive = 180-day minimum.
-  Build/delete cycles during the VM month can trigger these — prefer
-  delete-then-recreate over tier flipping.
-- Storage keys are not exported by ARM; never commit keys or SAS tokens.
-- Converting to pay-as-you-go keeps always-free tiers and 12-month free grants,
-  but **Student credit does not carry over**.
+- Budget alert at ₹100 as a safety net (not a decision ceiling).
+- Lifecycle rule: move originals to Cool; never auto-delete masters.
+- Early deletion fees: Cool = 30 days, Archive = 180 days.
+- Never commit keys or SAS tokens.
+- Converting to pay-as-you-go keeps always-free tiers and 12-month grants, but
+  Student credit does not carry over.
 
 ---
 
 ## 7. IaC status — ON HOLD (SP-6)
 
-Reserved folder: `Master_landing_zone_v1\` (currently empty).
+Reserved folder: `Master_landing_zone_v1\` (empty).
 
-When resumed:
-- Author a **subscription-scope** template (`subscriptionDeploymentTemplate.json`)
-  so it can create the resource group, budget, policy assignment, and RBAC.
-- Storage name via `[format('st{0}photo', uniqueString(subscription().subscriptionId, resourceGroup().name))]`.
-- `deploymentMode: Incremental` for idempotent redeploys.
-- Gate every deploy with `az deployment sub what-if`.
-- Target: rebuild "everything to date" in any new subscription with one command.
+When resumed: subscription-scope template (creates RG, budget, policy, RBAC);
+storage name via `uniqueString()`; `Incremental` mode; gate with `what-if`.
 
-### Why we author forward instead of trusting portal export
+Portal **Export template** is a snapshot, not truth. It misses the resource group,
+budgets, policy, role assignments, locks, diagnostics, subscription-scope items,
+and secrets; names return hardcoded. Workflow: intended template → `what-if` →
+deploy → `az group export` → **diff** → catalogue gaps.
 
-Portal **Export template** (and `az group export`) is a snapshot, not a source of
-truth. It does **not** capture: the resource group itself, **budgets**, **policy
-assignments**, **role assignments**, resource locks, diagnostic settings/alerts,
-subscription-scope resources, or secrets. Names come back hardcoded, not
-parameterized.
-
-Known-good workflow (this is also the interview story):
-intended template → `what-if` → deploy → `az group export` → **diff** →
-catalogue every non-exportable gap → optionally flip a setting in the portal to
-prove drift is detected.
-
-Illustrative diff:
 ```
 budget/monthly-100            MISSING in export  (subscription scope)
 roleAssignment: Reader        MISSING in export
-storage.allowBlobPublicAccess expected false, actual true
 storage.minTlsVersion         expected TLS1_2, actual TLS1_0
-staticWebsite.error404Path    expected 404.html, actual unset
 ```
 
-Interview framing (STAR): situation = cost-capped greenfield landing zone;
-task = prove the template is authoritative and know its blind spots; action =
-forward-authored template + what-if gate + export diff + intentional drift test;
-result = rebuild in minutes, zero click-ops, documented list of non-exportable
-resource types, cost guardrails as code. Follow-ups it invites: drift strategy,
-why not just export, secrets handling.
+Interview framing: template is authoritative; what-if gates changes; export diff
+proves drift is detected; documented list of non-exportable resources.
 
 ---
 
@@ -254,112 +233,95 @@ why not just export, secrets handling.
 
 ```
 Photography_app\
-├── .git\                     local version history (not a backup)
+├── .git\                     local history (not a backup)
 ├── .gitignore                secrets, scratch, OS noise
-├── AI_Support.md             THIS FILE — AI memory + decision log (AI-written)
-├── Master_landing_zone_v1\   reserved for subscription-scope ARM (empty; on hold)
-├── labs\                     (planned) per-option implementations
-│   ├── 01-storage-static\    Stage 1 — read-only gallery
-│   ├── 02-app-service-f1\    hosting bake-off candidate
-│   ├── 03-functions-api\     later, optional dynamic bits
+├── AI_Support.md             THIS FILE — AI memory + decision log
+├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
+├── labs\                     (planned) per-candidate builds
+│   ├── 01-storage-static\    hosting candidate
+│   ├── 02-app-service-f1\    hosting candidate
+│   ├── 03-functions-api\     later, optional
 │   ├── 04-vm-3tier\          architect lab (SP-5)
-│   └── 05-static-web-apps\   hosting bake-off candidate
+│   └── 05-static-web-apps\   hosting candidate
 ├── pipeline\                 (planned) resize / strip location data / upload
-└── docs\                     (planned) decision log exports, cost screenshots,
-                              interview notes
+└── docs\                     (planned) cost screenshots, interview notes
 ```
 
 Git conventions:
-- Commit at **milestones only** — not every experiment (owner preference 2026-11-19).
-- Branch `main` is the record.
-- Commit style: `area: what changed` (e.g. `site: add gallery manifest generator`).
-- Exported actual-state JSON **is** committed — that is the drift timeline.
-- Repo-local identity is set (`ashar` / `ashar@local`); global git config untouched.
-- No remote yet (OD-10).
+- Commit at **milestones only**; `main` is the record.
+- Style: `area: what changed`.
+- Exported actual-state JSON is committed — that is the drift timeline.
+- Repo-local identity `ashar` / `ashar@local`; global config untouched.
+- No remote yet (`OD-C5`).
 
 ---
 
 ## 9. Conversation log (append-only)
 
-### 2026-11-05 — Session 1: scoping
-- Established goal: public HTTPS photography showcase on Azure; owner learning for
-  AZ-104/admin interviews, not just shipping.
-- Locked SP-1 (single storage account) and SP-2 (no domain).
-- Explained that no-domain removes the usual "custom domain needs CDN/Front Door
-  for SSL" problem → Storage static website is viable at ~₹0 compute.
-- Presented hosting options matrix (storage static, SWA, App Service F1, Functions,
-  Container Apps, VM 3-tier, AKS) with cost/AZ-104-value/fit columns; recommended
-  decoupling **data** (one storage account) from **presentation** (multiple labs).
-- Explained portal Export template limits; recommended forward-authored template +
-  `what-if` + export diff as the drift story.
+### 2026-11-05 — Session 1 (summary)
+- Goal: public HTTPS photography site on Azure; learning for AZ-104 interviews.
+- Locked SP-1, SP-2. Presented hosting options matrix; recommended separating
+  data from presentation. Explained export-template limits and the diff story.
 
-### 2026-11-08 — Session 2: decisions + memory file
-- Owner confirmed: free/student subscription, cost ≈₹0 is a hard requirement.
-- Locked SP-3..SP-6 (static website → PAYG; ₹10–50 ceiling / ~20 visitors;
-  VM 3-tier lab built-and-torn-down; IaC on hold).
-- Cost math accepted: Hot renditions ~₹5 + Cool originals ~₹26 ≈ **₹32/month**.
-- Explained `git init` rationale: tamper-proof AI_Support, dated drift timeline
-  from committed exports, safe lab teardown/restore. Not an off-machine backup.
-- Ran `git init -b main`, set repo-local identity, wrote `.gitignore` and this file.
+### 2026-11-08 — Session 2 (summary)
+- Confirmed free/student subscription. Locked SP-3..SP-6 (since revised).
+- Cost math: ~₹32/month for a static showcase. Created git repo + this file.
 
-### 2026-11-19 — Session 3: product shape + staged architecture
-- Owner rejected "portfolio only": the goal is a community platform — owner's work,
-  member posts, and events (GuruShots-style). Reference sites: anseladams.com,
-  jimmychin.com, artwolfe.com.
-- Agreed staged delivery: Stage 1 read-only gallery → Stage 2 accounts + member
-  uploads → Stage 3 events/voting. "Stage then scale."
-- Locked SP-7..SP-11: one app + separate storage in three data areas; hosting
-  NOT locked (hands-on bake-off, instinct); staged product; plain-language rule.
-- Corrections: monolith describes the app code, not data location — storage stays
-  separate (owner's requirement). Owner does not want exhaustive version control;
-  commits at milestones only.
-- Stage 1 confirmed: read-only, world-visible, no logins.
+### 2026-11-19 — Session 3: product shape
+- Owner rejected "portfolio only": community platform — owner's work, member posts,
+  events (GuruShots-style). References: anseladams, jimmychin, artwolfe.
+- Locked SP-7..SP-11. Staged delivery. Stage 1 read-only, world-visible.
+- Owner does not want exhaustive version control; commits at milestones.
+
+### 2026-11-22 — Session 4: service grouping + SP cleanup
+- Owner ordered a contradiction review. Found: SP-3 vs SP-9 (hosting), SP-4 vs
+  paid later stages, SP-1 vs an external database option.
+- **SP-3 retired** (hosting open). **SP-4 retired** (no fixed ceiling).
+- **SP-1 re-affirmed and tightened**: all photos, thumbnails, member uploads, and
+  contest entries in one storage account.
+- **SP-12 added**: least monthly cost is the standing rule; per-service review.
+- §3 restructured into service groups (`OD-H/I/R/P/D/M/E`) plus configuration
+  decisions (`OD-C1…C8`); old OD-1…OD-17 folded in.
+- Clarified service vs microservice for the owner.
 
 ---
 
 ## 10. Next actions
 
-- [ ] **NA-1** Answer OD-1 (region) and OD-2 (prefix/tags)
-- [ ] **NA-2** Manually create the storage account in the portal (GPv2/LRS/no HNS),
-      enable static website, create the containers (site, photos, private masters, records)
-- [ ] **NA-3** Upload a hello-world page and confirm the HTTPS address loads
-- [ ] **NA-4** Pick the look from the references (OD-8); sketch pages in plain words
-- [ ] **NA-5** Build the pages + the photo list file
-- [ ] **NA-6** Write the publish script (resize, remove location data, upload)
-- [ ] **NA-7** Create budget alert at ₹100; add lifecycle rule for originals
-- [ ] **NA-8** Convert subscription to pay-as-you-go; check the first invoice delta
-- [ ] **NA-9** Launch: share the read-only link with the initial 20 people
-- [ ] **NA-10** Prepare the Stage 2 hosting bake-off (OD-14) and 3-tier VM lab (SP-5)
+- [ ] **NA-1** Answer `OD-C1` (region) and `OD-C2` (naming/tags)
+- [ ] **NA-2** Test Stage 1 host candidates from `OD-H`; note cost/effort
+- [ ] **NA-3** Create storage account + containers (site, photos, masters, records)
+- [ ] **NA-4** Upload hello-world page; confirm HTTPS address
+- [ ] **NA-5** Pick the look (`OD-C3`); build pages + photo list
+- [ ] **NA-6** Publish script (resize, remove location data, upload)
+- [ ] **NA-7** Budget alert + lifecycle rule
+- [ ] **NA-8** Convert subscription to pay-as-you-go; check first invoice
+- [ ] **NA-9** Launch read-only link with the initial 20 people
+- [ ] **NA-10** Prepare Stage 2 (`OD-I`, `OD-R`) and the 3-tier VM lab (SP-5)
 
 ---
 
-## 11. Glossary (terms used in this project)
+## 11. Glossary
 
 | Term | Meaning here |
 |---|---|
-| GPv2 | General-purpose v2 storage account; required for static website hosting |
-| `$web` | Reserved container that serves the static website endpoint |
-| Static website endpoint | `<account>.z##.web.core.windows.net`, anonymous read, HTTPS included |
-| HNS | Hierarchical namespace (ADLS Gen2) — must stay **off**; incompatible |
+| Service | An Azure capability you rent (storage, App Service, database) |
+| Microservice | Your own app split into several small apps talking over a network |
+| GPv2 | General-purpose v2 storage account; required for static website |
+| `$web` | Reserved container that serves the static website |
+| HNS | Hierarchical namespace (ADLS Gen2) — keep **off** for static websites |
 | LRS | Locally redundant storage; cheapest redundancy |
-| Hot / Cool / Archive | Blob access tiers: storage price down, access/latency/min-retention up |
-| Egress | Outbound data transfer; first 100 GB/month free per billing account |
-| SAS | Shared Access Signature — scoped, time-limited URL token |
-| RBAC | Role-based access control (e.g. Storage Blob Data Contributor) |
-| Budget | Cost Management object with thresholds + action group alerts |
+| Hot / Cool / Archive | Blob tiers: cheaper storage, higher access/min-retention |
+| Egress | Outbound data transfer; first 100 GB/month free |
+| RBAC | Role-based access control |
+| Budget | Cost Management object with alert thresholds |
 | ARM template | Declarative JSON describing desired Azure state |
-| Bicep | DSL that compiles to ARM JSON |
+| Bicep | Language that compiles to ARM JSON |
 | `what-if` | Dry-run diff of a deployment against current state |
-| Drift | Divergence between desired (template) and actual (deployed) state |
-| Idempotent | Re-running produces the same end state (Incremental mode) |
-| Subscription-scope deployment | Template that can create RGs, budgets, policy, RBAC |
-| Auto-shutdown | Dev/Test schedule that stops a VM nightly to protect credit |
-| Monolith | One app containing all features (the chosen shape, SP-7) |
-| Microservices | Many small apps, each separate (not chosen) |
-| Container (storage) | A folder inside a storage account |
-| Database | A filing cabinet for records: users, captions, votes |
-| App Service | Azure's managed place to run a web app |
-| Static website | Plain files served directly by storage; no app running |
+| Drift | Difference between desired (template) and actual (deployed) state |
+| Idempotent | Re-running produces the same end state |
+| Subscription-scope | Template that can create RGs, budgets, policy, RBAC |
+| Auto-shutdown | Schedule that stops a VM nightly to protect credit |
 
 ---
 
@@ -367,6 +329,7 @@ Git conventions:
 
 | Date | Change | Reason |
 |---|---|---|
-| 2026-11-08 | Created file; seeded §0–§12 from Sessions 1–2 | Persist context across chats/models/reinstalls |
-| 2026-11-08 | `git init -b main`, `.gitignore`, initial commit | Tamper-proof history + drift timeline |
-| 2026-11-19 | Locked SP-7..SP-11; restructured architecture/roadmap | Product changed from portfolio to staged community platform; hosting left open |
+| 2026-11-08 | Created file; seeded sessions 1–2 | Persist context across chats/models/reinstalls |
+| 2026-11-08 | `git init`, `.gitignore`, initial commit | Tamper-proof history + drift timeline |
+| 2026-11-19 | Locked SP-7..SP-11; staged architecture | Product changed to community platform |
+| 2026-11-22 | SP-3, SP-4 retired; SP-1 tightened; SP-12 added; §3 regrouped (`OD-H…`, `OD-C…`); schema v2 | Contradiction review + owner wants services grouped; old OD-1…OD-17 folded into groups |
