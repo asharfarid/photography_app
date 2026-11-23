@@ -13,6 +13,10 @@
 tmp/
 out/
 *.log
+temp.txt
+
+# ---- Media payloads: live on disk / in Azure, never in git ----
+app_v1/storage_account/
 
 # ---- OS noise ----
 Thumbs.db

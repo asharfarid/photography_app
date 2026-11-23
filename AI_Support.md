@@ -52,6 +52,7 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 | Hosting | **OPEN** — hands-on bake-off across candidates (`OD-H`) |
 | Reference sites | anseladams.com, jimmychin.com, artwolfe.com (look), gurushots.com (events) |
 | Working dir | `C:\Stagging\AZ104_free_sub_project\Photography_app` (Windows, pwsh, git 2.54) |
+| App root | `app_v1\main` = site root; `app_v1\storage_account` = lift-and-shift mirror of the blob account |
 
 Non-goals near term: custom domain, microservices, native mobile app, payments,
 SEO/marketing, multi-region.
@@ -75,6 +76,7 @@ SEO/marketing, multi-region.
 | SP-11 | **Plain language only**; define any unavoidable term in one line | ACTIVE | 2026-11-19 |
 | SP-12 | **Least monthly cost is the standing rule.** No fixed ceiling; every service's cost is reviewed before finalizing | ACTIVE | 2026-11-22 |
 | SP-13 | **Stage 1 front end is hand-written HTML/CSS/JS.** No React/Next.js in Stage 1; revisit only if Stage 2 needs it | ACTIVE | 2026-11-23 |
+| SP-14 | **App data files are `.json`.** They need a local web server (`file://` blocks reads); `serve.cmd` arrives when the gallery does | ACTIVE | 2026-11-23 |
 
 Derived constraints (consequences, not new decisions):
 
@@ -138,10 +140,12 @@ Visitor --HTTPS--> Stage 1 host (TBD)
                       |
                       v
                 Storage account (fixed, SP-1)
-                  |-- $web        : pages, styles, thumbnails
-                  |-- your-photos : viewing-size images (public)
-                  |-- originals   : full-size masters (private, Cool)
-                  |-- app-data    : photo list + captions (one file)
+                  |-- $web (if static website hosting is chosen): pages, styles, artwork
+                  |-- c1_my_photos_public   : owner photos, one folder per category
+                  |-- c2_my_purchase_store  : masters; app decides free vs paid (Stage 4)
+                  |-- c3_user_photos_public : member photos (Stage 2)
+                  |-- c4_user_purchase_store: member purchases (Stage 2/4)
+                  |-- c5_competitive_events : contest entries (Stage 3)
 ```
 
 **Stage 2+ — community (one app, storage separate).**
@@ -158,7 +162,13 @@ Design rules:
 - The app never keeps photos; it only hands out links.
 - One app, three internal rooms (owner, members, events). Split later only with evidence.
 - Database choice deferred to Stage 2 (`OD-R`).
-- Two image sizes: thumbnail for browsing, ~1600px for viewing. Masters private.
+- Two image sizes per photo in `c1`: **thumbnail** (~400 px) for browsing and
+  **display** (~1600–1920 px) for viewing. An optional **master** (up to 100 MB)
+  lives in `c2_my_purchase_store` and is only fetched on download. The browser
+  never loads a master.
+- Site artwork (backgrounds) lives in the app (`app_v1\main\artwork`), not in
+  storage; ~1920 px wide, real WebP. **A file's extension must match its real
+  format** — Azure sets `Content-Type` from the name, browsers sniff and lie.
 - Remove camera location data before publishing (privacy).
 - Publish is a local script, not a web portal.
 - **Paths:** relative only (`images/nature/x.jpg`), never `C:\...`. Lowercase,
@@ -176,8 +186,10 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 
 **Stage 1 — read-only gallery, public launch (NEXT)**
 - [ ] Answer `OD-C1` (region) and `OD-C2` (naming/tags)
-- [ ] **Build a rough homepage as the sketch** — real photos, real components,
-      minimal styling. The homepage *is* the plan, not paper.
+- [x] **First homepage skeleton** — `app_v1\main\index.html`, one full-width
+      image, title `weshoot`, no scrolling (2026-11-23)
+- [ ] Decide the homepage **content flow** — which boxes are clickable and where
+      they lead (navigation details later)
 - [ ] Agree the component list from that homepage (nav, grid, footer, etc.)
 - [ ] Pick the Stage 1 host from `OD-H` (hands-on test)
 - [ ] Create the storage account; containers for site, photos, private masters, records
@@ -251,10 +263,21 @@ proves drift is detected; documented list of non-exportable resources.
 ```
 Photography_app\
 ├── .git\                     local history (not a backup)
-├── .gitignore                secrets, scratch, OS noise
+├── .gitignore                secrets, scratch, OS noise, media payloads
 ├── AI_Support.md             THIS FILE — AI memory + decision log
-├── temp.txt                  project brief for external AI review (untracked)
+├── temp.txt                  project brief (untracked, ignored)
 ├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
+├── app_v1\                   current app version
+│   ├── ideas.md              idea parking lot for THIS version (resets per version)
+│   ├── main\                 SITE ROOT — lifted to the host as-is
+│   │   ├── index.html        one image, full width, blur(2px), no scroll
+│   │   └── artwork\          site artwork, not photos (real WebP, ~1920 px)
+│   └── storage_account\      mirror of the blob account (NOT in git)
+│       ├── c1_my_photos_public\   9 category folders; photos still flat originals
+│       ├── c2_my_purchase_store\  masters; free vs paid decided by the app
+│       ├── c3_user_photos_public\ Stage 2
+│       ├── c4_user_purchase_store\Stage 2/4
+│       └── c5_competitive_events\ Stage 3
 ├── labs\                     (planned) per-candidate builds
 │   ├── 01-storage-static\    hosting candidate
 │   ├── 02-app-service-f1\    hosting candidate
@@ -265,9 +288,13 @@ Photography_app\
 └── docs\                     (planned) cost screenshots, interview notes
 ```
 
+Photo folder target (not built yet): one folder per photo, `thumb` + `display`,
+plus optional `master` in `c2`.
+
 Git conventions:
 - Commit at **milestones only**; `main` is the record.
 - Style: `area: what changed`.
+- `app_v1/storage_account/` and `temp.txt` are **ignored** — media is not versioned.
 - Exported actual-state JSON is committed — that is the drift timeline.
 - Repo-local identity `ashar` / `ashar@local`; global config untouched.
 - No remote yet (`OD-C5`).
@@ -276,51 +303,57 @@ Git conventions:
 
 ## 9. Conversation log (append-only)
 
-### 2026-11-05 — Session 1 (summary)
+### 2026-11-05 — Session 1
 - Goal: public HTTPS photography site on Azure; learning for AZ-104 interviews.
-- Locked SP-1, SP-2. Presented hosting options matrix; recommended separating
-  data from presentation. Explained export-template limits and the diff story.
+- Locked SP-1, SP-2. Hosting matrix; separate data from presentation; export-template limits.
 
-### 2026-11-08 — Session 2 (summary)
-- Confirmed free/student subscription. Locked SP-3..SP-6 (since revised).
-- Cost math: ~₹32/month for a static showcase. Created git repo + this file.
+### 2026-11-08 — Session 2
+- Free/student subscription confirmed. Locked SP-3..SP-6 (since revised).
+- ~₹32/month estimate for a static showcase. Created git repo + this file.
 
 ### 2026-11-19 — Session 3: product shape
-- Owner rejected "portfolio only": community platform — owner's work, member posts,
-  events (GuruShots-style). References: anseladams, jimmychin, artwolfe.
-- Locked SP-7..SP-11. Staged delivery. Stage 1 read-only, world-visible.
-- Owner does not want exhaustive version control; commits at milestones.
+- Not "portfolio only": community platform — owner's work, member posts, events.
+  References: anseladams, jimmychin, artwolfe. Locked SP-7..SP-11.
+- Staged delivery; Stage 1 read-only, world-visible. Milestone commits only.
 
 ### 2026-11-22 — Session 4: service grouping + SP cleanup
-- Owner ordered a contradiction review. Found: SP-3 vs SP-9 (hosting), SP-4 vs
-  paid later stages, SP-1 vs an external database option.
-- **SP-3 retired** (hosting open). **SP-4 retired** (no fixed ceiling).
-- **SP-1 re-affirmed and tightened**: all photos, thumbnails, member uploads, and
-  contest entries in one storage account.
-- **SP-12 added**: least monthly cost is the standing rule; per-service review.
-- §3 restructured into service groups (`OD-H/I/R/P/D/M/E`) plus configuration
-  decisions (`OD-C1…C8`); old OD-1…OD-17 folded in.
-- Clarified service vs microservice for the owner.
+- Contradiction review. **SP-3 retired** (hosting open), **SP-4 retired** (no ceiling).
+- **SP-1 re-affirmed and tightened**: all photos, thumbnails, member uploads and
+  contest entries in one storage account. **SP-12 added**: least monthly cost.
+- §3 restructured into service groups (`OD-H/I/R/P/D/M/E`) + config (`OD-C1…C8`).
 
 ### 2026-11-23 — Session 5: runtime + build approach
-- Reviewed a second opinion (ChatGPT) recommending React + Vite + JavaScript,
-  Stage 1 static, Node only at Stage 2. Agreed with most of it; rejected starting
-  with React because Stage 1 is read-only and security/simplicity matter more.
-- **SP-13 locked:** Stage 1 is hand-written HTML/CSS/JS. React is optional at Stage 2.
-- Explained HTML is unavoidable; React/Node are optional producers of it.
-- **Path rule agreed:** relative paths, lowercase, hyphens, no spaces; keep local
-  and cloud folders identical (`OD-C9`).
-- WordPress and Wix formally rejected (`§3.3`).
-- Build approach agreed: the **rough homepage is the sketch** — real photos, real
-  components, styling last. No paper plan.
-- `temp.txt` written for an external second opinion (untracked).
+- Second opinion (ChatGPT) recommended React + Vite; rejected for Stage 1 —
+  read-only, security and simplicity win. **SP-13 locked:** hand-written HTML/CSS/JS.
+- **Path rule agreed** (`OD-C9`): relative, lowercase, hyphens, no spaces; local and
+  cloud folders identical. WordPress and Wix formally rejected (`§3.3`).
+- Build approach: the **rough homepage is the sketch** — real photos, styling last.
+
+### 2026-11-23 — Session 6: app_v1 skeleton + first homepage
+- **Folder contract agreed:** `app_v1\main` = site root (code only);
+  `app_v1\storage_account` = mirror of the blob account, lifted as-is.
+- Storage containers named `c1_my_photos_public`, `c2_my_purchase_store`,
+  `c3_user_photos_public`, `c4_user_purchase_store`, `c5_competitive_events`.
+- **Photo model:** one folder per photo — `thumb` + `display`; optional `master`
+  for download. Masters stay in `c2`; app decides free vs paid (**Stage 4**).
+  Photos are still flat originals; not reorganised yet.
+- `app_v1\ideas.md` created — idea parking lot per app version; nothing there is
+  a decision until promoted here.
+- **First homepage built:** `app_v1\main\index.html`, title `weshoot`, one image
+  at full width, `blur(2px)`, no scrolling. Owner cropped artwork to 1920×1112.
+- **SP-14:** app data is `.json`; a local server is required (owner's choice
+  after being shown every alternative). `serve.cmd` deferred to the gallery.
+- Lesson learned twice: **extension must match real format.** Browsers sniff and
+  hide it; Azure sets `Content-Type` from the name. Squoosh export fixed it.
+- Decision recorded, not built: purchase store masters all live in `c2`.
 
 ---
 
 ## 10. Next actions
 
 - [ ] **NA-1** Answer `OD-C1` (region) and `OD-C2` (naming/tags)
-- [ ] **NA-2** Build the rough homepage as the sketch (HTML/CSS/JS, real photos)
+- [ ] **NA-2** ~~Build the rough homepage as the sketch~~ — skeleton done 2026-11-23
+- [ ] **NA-12** Decide homepage content flow: which boxes are clickable, where they lead
 - [ ] **NA-3** Agree the component list from the homepage
 - [ ] **NA-4** Test Stage 1 host candidates from `OD-H`; note cost/effort
 - [ ] **NA-5** Set up the storage account + folder layout (`OD-C9`)
@@ -368,3 +401,4 @@ Git conventions:
 | 2026-11-19 | Locked SP-7..SP-11; staged architecture | Product changed to community platform |
 | 2026-11-22 | SP-3, SP-4 retired; SP-1 tightened; SP-12 added; §3 regrouped (`OD-H…`, `OD-C…`); schema v2 | Contradiction review + owner wants services grouped; old OD-1…OD-17 folded into groups |
 | 2026-11-23 | SP-13 added (HTML/CSS/JS); `OD-C9` paths; rejected options; homepage-is-the-sketch approach | Runtime decision + build approach settled |
+| 2026-11-23 | Session 6: `app_v1` contract, containers `c1…c5`, photo model, `ideas.md`, first homepage, SP-14 (`.json`) | App folder structure and first build agreed |
