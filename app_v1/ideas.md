@@ -32,6 +32,7 @@ Rules:
 | I-4 | Three sizes per photo: thumbnail (~400 px), display (~1600–1920 px), master (untouched) | Browser never loads a 100 MB file; only the download does | 1 | 2026-11-23 |
 | I-5 | Add `serve.cmd` (local `python -m http.server`) when `photos.json` arrives | `.json` cannot be fetched from `file://`; needed only once there is data to load | 1 | 2026-11-23 |
 | I-6 | Fixed-height frame with `object-fit: cover` for stacked photos | Mixed portrait/landscape images jump around when each keeps its own height | 1 | 2026-11-23 |
+| I-7 | Keep `storage_account` beside `main`, and serve from `app_v1` (`/main/`) | A local server cannot reach files above its root; siblings mirror the Azure split | 1 | 2026-11-24 |
 
 ## Promoted
 

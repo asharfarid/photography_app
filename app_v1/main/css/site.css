@@ -1,0 +1,116 @@
+/* weshoot - app_v1
+   Header: fixed 70px bar, painted with the title bar image, text on top.
+   Hero: natural height (no crop), text overlaid at the top centre. */
+
+:root {
+  --header-height: 70px;
+  --ink: #3a2a1e;
+  --header-fallback: #f2d3b3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+
+/* ---------- header ---------- */
+
+#site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0 24px;
+  background-color: var(--header-fallback);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.site-name {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+/* nav appears only when site.json has entries */
+#site-header nav {
+  margin-left: auto;
+  display: flex;
+  gap: 24px;
+}
+
+#site-header nav a {
+  color: inherit;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+#site-header nav a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  position: relative;
+}
+
+/* the img keeps the photo's own shape: no crop, no stretch */
+.hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hero-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 18px 16px 0;
+  text-align: center;
+  color: #f77d31;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.hero-text p {
+  margin: 0;
+}
+
+.hero-text .hero-lead {
+  font-size: clamp(18px, 2.2vw, 30px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hero-text .hero-sub {
+  margin-top: 4px;
+  font-size: clamp(14px, 1.4vw, 20px);
+  opacity: 0.95;
+}
+
+/* ---------- messages ---------- */
+
+#load-error,
+.notice {
+  margin: 24px;
+  padding: 16px;
+  border: 1px solid #b00020;
+  background: #fdecef;
+  color: #7a0016;
+  font-size: 15px;
+}

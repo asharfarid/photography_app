@@ -1,0 +1,11 @@
+{
+  "siteName": "WeShoot",
+  "imageBase": "",
+  "titleBarImage": "artwork/index_title_bar.webp",
+  "heroImage": "artwork/index_background1.webp",
+  "heroText": [
+    "Finishing a race is what matters",
+    "Winning doesn't"
+  ],
+  "nav": []
+}
