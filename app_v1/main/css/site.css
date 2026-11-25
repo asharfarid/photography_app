@@ -1,10 +1,11 @@
 /* weshoot - app_v1
-   Header: fixed 70px bar, painted with the title bar image, text on top.
-   Hero: natural height (no crop), text overlaid at the top centre. */
+   Header: 70px sticky bar, painted with the title bar image.
+   Hero:   natural height (no crop), text at the top, 2x2 buttons over the photo. */
 
 :root {
   --header-height: 70px;
   --ink: #3a2a1e;
+  --accent: #f77d31;
   --header-fallback: #f2d3b3;
 }
 
@@ -42,8 +43,18 @@ body {
 
 .site-name {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.1em;
+}
+
+.site-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-name a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 /* nav appears only when site.json has entries */
@@ -70,7 +81,7 @@ body {
 }
 
 /* the img keeps the photo's own shape: no crop, no stretch */
-.hero img {
+.hero-photo {
   display: block;
   width: 100%;
   height: auto;
@@ -83,24 +94,86 @@ body {
   right: 0;
   padding: 18px 16px 0;
   text-align: center;
-  color: #f77d31;
+  color: var(--accent);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .hero-text p {
   margin: 0;
-}
-
-.hero-text .hero-lead {
   font-size: clamp(18px, 2.2vw, 30px);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
-.hero-text .hero-sub {
-  margin-top: 4px;
-  font-size: clamp(14px, 1.4vw, 20px);
-  opacity: 0.95;
+/* ---------- the four big buttons ---------- */
+
+/* anchored to the top of the photo, but never taller than the first screen,
+   so the block can never drift below the fold on wide, short windows */
+.hero-buttons {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: min(1200px, 78%);
+  height: 100%;
+  max-height: calc(100vh - var(--header-height));
+  align-content: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.big-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24vh;
+  padding: 0 16px;
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--accent);
+  text-align: center;
+  text-decoration: none;
+  font-size: clamp(16px, 1.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: box-shadow 0.22s ease, transform 0.22s ease,
+    background-color 0.22s ease;
+}
+
+/* light from the top right, so the shadow falls to the bottom left */
+.big-button:hover {
+  box-shadow: -6px 6px 18px rgba(0, 0, 0, 0.28);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.big-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* ---------- small screens: buttons leave the photo ---------- */
+
+@media (max-width: 700px) {
+  .hero-buttons {
+    position: static;
+    transform: none;
+    width: auto;
+    height: auto;
+    max-height: none;
+    align-content: normal;
+    margin: 24px 16px 32px;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .big-button {
+    height: 84px;
+  }
 }
 
 /* ---------- messages ---------- */

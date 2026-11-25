@@ -34,52 +34,96 @@
   const base = site.imageBase || "";
   const imageUrl = (path) => base + path;
 
-  document.title = site.siteName;
+  /* The single seam for identity: today a constant in site.json,
+     later the value comes from a login session. Pages never change. */
+  function getCurrentUser() {
+    return site.currentUser;
+  }
 
-  /* ---------- header ---------- */
+  /* ---------- header (every page) ---------- */
 
-  const header = document.getElementById("site-header");
-  header.style.backgroundImage = 'url("' + imageUrl(site.titleBarImage) + '")';
+  function buildHeader() {
+    const header = document.getElementById("site-header");
+    header.style.backgroundImage =
+      'url("' + imageUrl(site.titleBarImage) + '")';
 
-  const name = document.createElement("span");
-  name.className = "site-name";
-  name.textContent = site.siteName;
-  header.appendChild(name);
+    const name = document.createElement("span");
+    name.className = "site-name";
 
-  if (Array.isArray(site.nav) && site.nav.length > 0) {
-    const nav = document.createElement("nav");
-    for (const item of site.nav) {
-      const link = document.createElement("a");
-      link.href = item.href;
-      link.textContent = item.label;
-      nav.appendChild(link);
+    const link = document.createElement("a");
+    link.href = site.siteNameHref || "index.html";
+    link.textContent = site.siteName;
+    name.appendChild(link);
+
+    header.appendChild(name);
+
+    if (Array.isArray(site.nav) && site.nav.length > 0) {
+      const nav = document.createElement("nav");
+      for (const item of site.nav) {
+        const navLink = document.createElement("a");
+        navLink.href = item.href;
+        navLink.textContent = item.label;
+        nav.appendChild(navLink);
+      }
+      header.appendChild(nav);
     }
-    header.appendChild(nav);
   }
 
-  /* ---------- hero ---------- */
+  /* ---------- home page only ---------- */
 
-  const main = document.getElementById("site-main");
+  function buildHero() {
+    const main = document.getElementById("site-main");
 
-  const hero = document.createElement("section");
-  hero.className = "hero";
+    const hero = document.createElement("section");
+    hero.className = "hero";
 
-  const photo = document.createElement("img");
-  photo.src = imageUrl(site.heroImage);
-  photo.alt = "";
-  hero.appendChild(photo);
+    const photo = document.createElement("img");
+    photo.className = "hero-photo";
+    photo.src = imageUrl(site.heroImage);
+    photo.alt = "";
+    hero.appendChild(photo);
 
-  if (Array.isArray(site.heroText) && site.heroText.length > 0) {
-    const text = document.createElement("div");
-    text.className = "hero-text";
-    site.heroText.forEach((line, index) => {
-      const p = document.createElement("p");
-      p.className = index === 0 ? "hero-lead" : "hero-sub";
-      p.textContent = line;
-      text.appendChild(p);
-    });
-    hero.appendChild(text);
+    if (Array.isArray(site.heroText) && site.heroText.length > 0) {
+      const text = document.createElement("div");
+      text.className = "hero-text";
+      for (const line of site.heroText) {
+        const p = document.createElement("p");
+        p.textContent = line;
+        text.appendChild(p);
+      }
+      hero.appendChild(text);
+    }
+
+    if (Array.isArray(site.buttons) && site.buttons.length > 0) {
+      const nav = document.createElement("nav");
+      nav.className = "hero-buttons";
+      nav.setAttribute("aria-label", "Main sections");
+
+      for (const item of site.buttons) {
+        const button = document.createElement("a");
+        button.className = "big-button";
+        button.href = item.href;
+        button.textContent = item.label;
+        nav.appendChild(button);
+      }
+
+      hero.appendChild(nav);
+    }
+
+    main.appendChild(hero);
   }
 
-  main.appendChild(hero);
+  /* ---------- run ---------- */
+
+  document.body.dataset.user = getCurrentUser();
+
+  const isHome = document.body.dataset.page === "home";
+  if (isHome) {
+    document.title = site.siteName;
+  }
+
+  buildHeader();
+  if (isHome) {
+    buildHero();
+  }
 })();

@@ -1,11 +1,18 @@
 {
   "siteName": "WeShoot",
+  "siteNameHref": "index.html",
+  "currentUser": "786",
   "imageBase": "",
   "titleBarImage": "artwork/index_title_bar.webp",
   "heroImage": "artwork/index_background1.webp",
   "heroText": [
-    "Finishing a race is what matters",
-    "Winning doesn't"
+    "The world looks different through my lens"
   ],
-  "nav": []
+  "nav": [],
+  "buttons": [
+    { "label": "My Gallery", "href": "my_gallery.html" },
+    { "label": "Public Gallery", "href": "community.html" },
+    { "label": "My Store", "href": "store.html" },
+    { "label": "Events", "href": "events.html" }
+  ]
 }
