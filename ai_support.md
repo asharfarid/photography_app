@@ -469,6 +469,15 @@ Git conventions:
   commit → push. The owner does the pull and the push; the AI never commits.
 - **`AGENTS.md` declined** — a fifth file duplicating §0; `git start` covers it.
 
+### 2026-11-26 — Session 11: Codespaces — `git start` review (no work)
+- **Environment:** GitHub Codespaces (Linux), `/workspaces/photography_app`.
+- Ran `git start`: read §0–§3, both handover headers and the local newest entry;
+  reported me/other/last/open in four lines.
+- Repo at `8821af5` on `main`, clean, 0 ahead / 0 behind `origin/main`.
+- **No code, data or decisions changed**; NA-17, NA-15, NA-16, NA-18, NA-13 and
+  NA-14 all remain open.
+- Closed out with `git end`; no commit or push by the AI.
+
 ---
 
 ## 10. Next actions
@@ -586,3 +595,4 @@ runs code — so `OD-H` can no longer be Storage static website once Stage B lan
 | 2026-11-25 | Memory caught up after one day of drift; sessions 1–5 compressed; 4 missing photos recorded | Owner asked whether progress was being recorded — it was not |
 | 2026-11-25 | SP-10 revised (stages 1+2 merged); SP-16/17/18 added; `OD-C9` decided (underscores allowed); containers `c1…c5` → 3 purpose containers; `storage_account` → `Storage`; §4 rewritten; §11 Stage B added; §5/§8/§10 updated | Four sections built; owner wants the site built once for "a signed-in user" and asked what must exist now so Stage B and real login need no rewrite |
 | 2026-11-26 | Session 9 (Codespaces): My Gallery toolbar + dormant category cards, `users_gallery.json`. Session 10 (Windows): cross-environment protocol (§0 rules 11–16, §0.1, §0.2), `AI_Support.md` → `ai_support.md`, push-after-`git end` rule, §8 remote, §11 folder-is-truth, NA-17/NA-18 | Owner works in two environments and will not paste a handover prompt each session |
+| 2026-11-26 | Session 11 (Codespaces): `git start`/`git end` protocol run only; no code or decisions changed; `cloud_handover.md` given front matter + Session 2 entry | First end-to-end run of the two-keyword workflow |

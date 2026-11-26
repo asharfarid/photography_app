@@ -1,4 +1,49 @@
+---
+environment: cloud
+machine: GitHub Codespaces (Linux)
+last_session: 2026-11-26
+sessions: 2
+---
+
 # Cloud Handover — GitHub Codespaces
+
+## 2026-11-26 — GitHub Codespaces (Linux) — Session 2
+
+### Session
+- Branch `main`, started at `8821af5`, 0 ahead / 0 behind `origin/main`; tree clean.
+- Goal: run the two-keyword workflow (`git start` then `git end`) after the sync commit.
+
+### Start here
+- Nothing changed this session; the site is exactly as at `8821af5`.
+- Next real work is unchanged: answer NA-17, then build Stage B (NA-15).
+- This file now has front matter; Session 1 is kept below as history.
+
+### Changes
+- `ai_support.md` — §9 Session 11 added, §13 changelog row; no SP/OD changes.
+- `cloud_handover.md` — five-line front matter and this Session 2 entry added.
+- No app, code or data files touched.
+
+### Decisions
+- No new decisions this session — nothing to promote to §2/§3.
+
+### Ideas parked
+- None.
+
+### Open / unverified
+- All carry-overs stand: NA-17 (photo record shape), NA-15 (Stage B server),
+  NA-16 (containers/folder layout), NA-18 (`+`/`⚙` buttons), NA-13 (gallery view),
+  NA-14 (4 lost photos).
+
+### Next steps
+1. Answer NA-17 (are `photos[]` strings or objects?), then build `server.py`.
+2. Create the three containers and move to `public_photos/786/<category>/` (NA-16).
+3. Upload one photo and confirm the card layout in a Windows browser.
+4. Wire or disable the `+` and `⚙` toolbar buttons (NA-18).
+
+### Git
+- Session start: `8821af5` on main, 0 ahead / 0 behind origin.
+- Work at close: 2 modified (`ai_support.md`, `cloud_handover.md`) — left uncommitted for the owner.
+- Commit/push: none by the AI.
 
 ## 2026-11-26 — GitHub Codespaces (Linux) — Session 1
 
