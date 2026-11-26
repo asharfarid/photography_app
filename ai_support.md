@@ -1,14 +1,14 @@
 ---
 project: Photography_app
-file: AI_Support.md
+file: ai_support.md
 purpose: Persistent memory + decision log for AI assistant sessions
 schema_version: 2
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
-# AI_Support
+# ai_support
 
 Single source of truth for context that must survive a new chat, a different model,
 an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
@@ -29,9 +29,61 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 7. Modify only the repo and the storage mirror (`..\Storage`). Never touch global
    git config or anything else outside these unless explicitly asked.
 8. Commit at **milestones only** — not every experiment.
-9. Keep this file under ~500 lines; compress old log entries, never delete SPs.
+9. Keep this file under ~600 lines; compress §9 history when over; never delete SPs.
 10. **Plain language, always (SP-11).** Owner is an Azure admin, not a developer.
     Define any unavoidable term in one line.
+11. **Two environments share this repo — detect, never ask.** Windows (`win32`,
+    a `C:\` path, `$env:OS = Windows_NT`) owns `local_handover.md`; Linux under
+    `/workspaces` (`uname -s`) owns `cloud_handover.md`. Anything else: ask once,
+    then record it in that handover's header. Read the **other** environment's
+    handover at the start of every session; write only your own, never the other.
+12. **`git start` — read-only.** Read §0–§3, both handover headers and the other
+    handover's newest entry. Capture `git rev-parse --short HEAD` and the
+    ahead/behind count for the close-out. Report exactly four lines: me · other ·
+    who worked last · open items. Write nothing — the owner runs `git pull` and
+    `git push` himself, before and after the session.
+13. **`git end` — the close-out.** Run §0.1 in order. Writes files. **Never
+    commits or pushes** — the owner does that after reviewing.
+14. **Decisions live here; session detail lives in the handovers.** A handover
+    decision is one line **plus a pointer** ("→ §2 SP-19"). No pointer, not a
+    decision.
+15. **Handover format.** Five-line front matter (`environment`, `machine`,
+    `last_session`, `sessions`); entries **newest first**; the eight headings in
+    §0.2; ≤60 lines per entry; entries older than three sessions compress to
+    three bullets, never deleted. The Git section is always three lines and
+    describes the **start**, never the end. A file with no front matter (an older
+    handover) is read by the date in its newest entry title.
+16. **A stale handover is normal.** An older date means that environment has not
+    been used since. Never write to it, never "complete" it, never report it as
+    a problem.
+
+### 0.1 `git end` checklist (run in order)
+
+1. Detect the environment (rule 11). If the two checks disagree, **stop and ask**.
+2. Read the other environment's newest entry.
+3. Promote every decision here: §2 (new SP), §3 (status), §4/§5/§8 if structure
+   moved; update `last_updated`.
+4. Park undecided ideas in `app_v1/ideas.md` (next free `I-n`); mark promoted ones.
+5. Append the session to §9.
+6. Update §10 and §13.
+7. Write your handover entry (newest first) and bump `last_session`, `sessions`.
+8. Self-check and print: headings 8/8 · every decision has a pointer · Git 3
+   lines · files written · files untouched.
+9. Report what was recorded and what could not be verified.
+10. Do not commit, do not push.
+
+### 0.2 Handover headings — exactly these eight, in this order
+
+| Heading | Its only job |
+|---|---|
+| `Session` | branch, start commit, one-line goal (no date — the entry title has it) |
+| `Start here` | max 3 bullets: what the next session needs if it reads nothing else |
+| `Changes` | files created / modified / deleted — on disk, not why |
+| `Decisions` | one line each, always with a pointer into this file |
+| `Ideas parked` | IDs only (`I-8`, `I-9`) |
+| `Open / unverified` | blockers, owner answers needed, what could not be tested |
+| `Next steps` | three to five, ordered |
+| `Git` | `Session start: <hash> on main, <n> ahead / <n> behind origin` · `Work at close: <n> modified, <n> new — left uncommitted for the owner` · `Commit/push: none by the AI` |
 
 ---
 
@@ -121,7 +173,7 @@ Derived constraints (consequences, not new decisions):
 | `OD-C2` | Naming prefix + tags | OPEN | e.g. `ashphoto`; tags `env`, `owner`, `purpose` |
 | `OD-C3` | Look and feel | OPEN | big single photo, simple menu, work grouped in collections |
 | `OD-C4` | Original tier | OPEN | Cool likely; Archive needs long retention |
-| `OD-C5` | Off-machine backup | OPEN | private GitHub remote later; local `.git` is not a backup |
+| `OD-C5` | Off-machine backup | OPEN (partly met) | `origin` = GitHub added 2026-11-25, so an off-machine copy exists; privacy/retention not formally decided. Local `.git` alone is not a backup |
 | `OD-C6` | Image sizes | OPEN | ~400px thumbnail, ~1600px viewing |
 | `OD-C7` | Member upload rules | OPEN | size/format limits, moderation, per-user quota (~100–200 photos) |
 | `OD-C8` | IaC timing/style, when SP-6 lifts | OPEN | subscription-scope template vs Bicep |
@@ -266,7 +318,10 @@ C:\Stagging\AZ104_free_sub_project\
 │   └── event_photos\                 contest entries (Stage 3)
 │       (all three agreed, not created; the folder is empty — see NA-14)
 └── Photography_app\              THE REPO
-    ├── .git\ .gitignore AI_Support.md
+    ├── .git\  .gitignore
+    ├── ai_support.md             this file — project memory + decision log
+    ├── cloud_handover.md         Codespaces session diary (cloud writes it)
+    ├── local_handover.md         Windows session diary (local writes it)
     ├── temp.txt                  project brief (ignored)
     ├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
     ├── app_v1\                   current app version
@@ -283,6 +338,8 @@ C:\Stagging\AZ104_free_sub_project\
     │       ├── js\app.js         reads site.json → header, hero, buttons
     │       ├── data\site.json    siteName, siteNameHref, currentUser, imageBase,
     │       │                     titleBarImage, heroImage, heroText[], nav[], buttons[]
+    │       ├── data\users_gallery.json   per-user firstName + 8 categories
+    │       │                     (photos[] + cover, both empty today)
     │       └── artwork\          site artwork only (real WebP, not photos)
     ├── labs\                     (planned) 01-storage-static · 02-app-service-f1 ·
     │                             03-functions-api · 04-vm-3tier (SP-5) · 05-static-web-apps
@@ -305,7 +362,10 @@ Git conventions:
 - `temp.txt` is **ignored**; media lives outside the repo entirely (SP-15).
 - Exported actual-state JSON is committed — that is the drift timeline.
 - Repo-local identity `ashar` / `ashar@local`; global config untouched.
-- No remote yet (`OD-C5`).
+- Remote `origin` = `github.com/asharfarid/photography_app` (added 2026-11-25).
+  Push **after** `git end`, so code, memory and handover land in one commit.
+- Two author identities exist: `ashar <ashar@local>` (Windows) and
+  `asharfarid <asharfarid@gmail.com>` (Codespaces / GitHub).
 
 ---
 
@@ -378,6 +438,37 @@ Git conventions:
   stale `app.js` and the page looks half-updated. **Ctrl+F5 after every change.**
   `server.py` will send `Cache-Control: no-store` for html/js/css.
 
+### 2026-11-26 — Session 9: Codespaces — My Gallery toolbar + category cards
+- **Environment:** GitHub Codespaces (Linux), fresh OpenCode install. Owner spent
+  ~1 hour re-explaining the project; `ai_support.md` + `ideas.md` then carried it.
+  No browser there — every visual check deferred to Windows.
+- **`data/users_gallery.json` created:** `users.786.firstName = "Ashar"` plus the
+  eight categories, each `photos: []`, `cover: null`.
+- **`my_gallery.html`** → `data-page="my-gallery"`. **`app.js`** loads the new file
+  on that page only, builds a non-sticky toolbar (`Ashar · 786` left, search
+  centre, `+` and `⚙` right) and the category cards.
+- **Cards are dormant:** only categories with ≥1 photo render — no placeholders.
+  Card = 24 vh, half album art / half frosted label, ±4 % zigzag, odd = name left.
+  Mobile: full-bleed art + overlay, 120 px. **No drag reorder**; alphabetical.
+- **Cover rule:** first upload becomes the cover, locked while there is one photo;
+  the user picks once there are two. Store a reference, never a copy.
+- Committed and pushed by the owner as `b663909` (GitHub identity).
+- **Known gaps:** `+` and `⚙` have no handlers; `imageUrl(cover)` breaks if
+  `photos[]` ever holds objects instead of strings.
+
+### 2026-11-26 — Session 10: cross-environment protocol + file rename
+- **Local check of the pull:** home renders 4 buttons at 174–519 in a 678 px
+  window, no console errors; `my_gallery` renders a 72 px toolbar (`Ashar · 786`,
+  search, two icon buttons), zero cards, no errors.
+- **Collaboration protocol agreed** (§0 rules 11–16, §0.1, §0.2): two keywords,
+  environment detection, eight handover headings, five-line front matter,
+  newest-first, 60-line cap, three-line Git section, printed self-check.
+- **Renamed `AI_Support.md` → `ai_support.md`** (case-only, two-step `git mv`).
+  Older notes may still say `AI_Support.md`; it is this file.
+- **Push timing settled:** `git pull` → `git start` → work → `git end` → review →
+  commit → push. The owner does the pull and the push; the AI never commits.
+- **`AGENTS.md` declined** — a fifth file duplicating §0; `git start` covers it.
+
 ---
 
 ## 10. Next actions
@@ -385,12 +476,15 @@ Git conventions:
 - [ ] **NA-1** Answer `OD-C1` (region) and `OD-C2` (naming/tags)
 - [x] **NA-2** ~~Build the rough homepage as the sketch~~ — skeleton done 2026-11-23
 - [x] **NA-12** ~~Decide homepage content flow~~ — four sections + 2×2 buttons, 2026-11-25
+- [ ] **NA-17** **Settle the photo record shape before Stage B**: is `photos[]` a
+      list of strings or objects? This decides `imageUrl(cover)` in `app.js`
 - [ ] **NA-15** **Build Stage B** — local upload server (§11); see it working in
       `my_gallery.html` and `store.html` before touching Azure
 - [ ] **NA-16** Create the 3 containers under `..\Storage` and move the user folder
       layout to `public_photos\786\<category>\`
 - [ ] **NA-13** Build the gallery view: photo list per category, thumbnails,
       lightbox — depends on NA-15
+- [ ] **NA-18** Wire or disable the `+` and `⚙` toolbar buttons — they do nothing today
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -439,6 +533,10 @@ browser --GET  /api/photos-->  server.py --lists -->  ..\Storage\public_photos\7
   is considering asking for a unique name per folder — undecided.
 - Show a simple list of uploaded files under the upload box, so success is visible
   without opening Explorer.
+- **The folder is the truth; the JSON is the preferences.** Photo lists are read
+  from `public_photos\<id>\<category>\`; `users_gallery.json` holds only what a
+  folder cannot express (display name, chosen cover, category order, background).
+  Never keep a second copy of the file list — two lists always drift.
 - **Not in Stage B:** login, tokens, database, per-user quotas, moderation.
 
 **Azure later:** swap `..\Storage` for the container and `/media/` for the blob URL
@@ -487,3 +585,4 @@ runs code — so `OD-H` can no longer be Storage static website once Stage B lan
 | 2026-11-24 | Session 7: JSON-driven page, `serve.ps1`/`.cmd`, hero text, storage moved outside the repo (SP-15) | Page became data-driven; owner wants storage out of every version |
 | 2026-11-25 | Memory caught up after one day of drift; sessions 1–5 compressed; 4 missing photos recorded | Owner asked whether progress was being recorded — it was not |
 | 2026-11-25 | SP-10 revised (stages 1+2 merged); SP-16/17/18 added; `OD-C9` decided (underscores allowed); containers `c1…c5` → 3 purpose containers; `storage_account` → `Storage`; §4 rewritten; §11 Stage B added; §5/§8/§10 updated | Four sections built; owner wants the site built once for "a signed-in user" and asked what must exist now so Stage B and real login need no rewrite |
+| 2026-11-26 | Session 9 (Codespaces): My Gallery toolbar + dormant category cards, `users_gallery.json`. Session 10 (Windows): cross-environment protocol (§0 rules 11–16, §0.1, §0.2), `AI_Support.md` → `ai_support.md`, push-after-`git end` rule, §8 remote, §11 folder-is-truth, NA-17/NA-18 | Owner works in two environments and will not paste a handover prompt each session |
