@@ -1,0 +1,17 @@
+{
+  "users": {
+    "786": {
+      "firstName": "Ashar",
+      "categories": [
+        { "id": "abstract", "label": "Abstract", "photos": [], "cover": null },
+        { "id": "birds_animals", "label": "Birds & Animals", "photos": [], "cover": null },
+        { "id": "landscape", "label": "Landscape", "photos": [], "cover": null },
+        { "id": "life_style", "label": "Life Style", "photos": [], "cover": null },
+        { "id": "micro_lense", "label": "Micro Lense", "photos": [], "cover": null },
+        { "id": "portraits", "label": "Portraits", "photos": [], "cover": null },
+        { "id": "sky", "label": "Sky", "photos": [], "cover": null },
+        { "id": "travel", "label": "Travel", "photos": [], "cover": null }
+      ]
+    }
+  }
+}

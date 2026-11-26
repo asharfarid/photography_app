@@ -1,5 +1,5 @@
 /* weshoot - app_v1
-   Reads data/site.json and builds the page.
+   Reads data/site.json and data/users_gallery.json and builds the page.
    CSS never touches the data; this file is the only one that does. */
 
 (async function () {
@@ -12,13 +12,17 @@
     errorBox.textContent = message;
   }
 
+  async function loadJson(path) {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(path + " (" + response.status + " " + response.statusText + ")");
+    }
+    return response.json();
+  }
+
   let site;
   try {
-    const response = await fetch("data/site.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(response.status + " " + response.statusText);
-    }
-    site = await response.json();
+    site = await loadJson("data/site.json");
   } catch (error) {
     console.error(error);
     fail(
@@ -113,17 +117,139 @@
     main.appendChild(hero);
   }
 
+  /* ---------- my gallery: toolbar ---------- */
+
+  function buildGalleryToolbar(user) {
+    const main = document.getElementById("site-main");
+
+    const bar = document.createElement("div");
+    bar.className = "gallery-toolbar";
+
+    const who = document.createElement("span");
+    who.className = "gallery-user";
+    who.textContent = user.firstName + " \u00b7 " + getCurrentUser();
+    bar.appendChild(who);
+
+    const search = document.createElement("div");
+    search.className = "gallery-search";
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = "Search photos";
+    input.setAttribute("aria-label", "Search photos");
+    input.autocomplete = "off";
+    search.appendChild(input);
+
+    bar.appendChild(search);
+
+    const actions = document.createElement("div");
+    actions.className = "gallery-actions";
+
+    const buttons = [
+      { label: "+", title: "Add photo" },
+      { label: "\u2699", title: "Manage photos and settings" },
+    ];
+
+    for (const item of buttons) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "gallery-action";
+      button.textContent = item.label;
+      button.title = item.title;
+      button.setAttribute("aria-label", item.title);
+      actions.appendChild(button);
+    }
+
+    bar.appendChild(actions);
+    main.appendChild(bar);
+  }
+
+  /* ---------- my gallery: category cards (dormant until photos exist) ---------- */
+
+  function buildCategoryCard(category, cover) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "category-card";
+
+    const art = document.createElement("span");
+    art.className = "category-art";
+
+    const photo = document.createElement("img");
+    photo.src = imageUrl(cover);
+    photo.alt = "";
+    art.appendChild(photo);
+
+    const label = document.createElement("span");
+    label.className = "category-label";
+    label.textContent = category.label;
+
+    card.appendChild(art);
+    card.appendChild(label);
+    return card;
+  }
+
+  function buildCategoryCards(user) {
+    const main = document.getElementById("site-main");
+
+    const categories = Array.isArray(user.categories) ? user.categories : [];
+    const withPhotos = categories.filter(
+      (category) =>
+        Array.isArray(category.photos) && category.photos.length > 0
+    );
+
+    if (withPhotos.length === 0) {
+      return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "category-list";
+
+    for (const category of withPhotos) {
+      const cover = category.cover || category.photos[0];
+      list.appendChild(buildCategoryCard(category, cover));
+    }
+
+    main.appendChild(list);
+  }
+
+  async function buildMyGallery() {
+    let gallery;
+    try {
+      gallery = await loadJson("data/users_gallery.json");
+    } catch (error) {
+      console.error(error);
+      fail(
+        "Could not load data/users_gallery.json (" +
+          error.message +
+          "). Start the site with serve.cmd, then open http://localhost:8000"
+      );
+      return;
+    }
+
+    const user = gallery.users && gallery.users[getCurrentUser()];
+    if (!user) {
+      fail("No gallery data for user " + getCurrentUser() + ".");
+      return;
+    }
+
+    buildGalleryToolbar(user);
+    buildCategoryCards(user);
+  }
+
   /* ---------- run ---------- */
 
   document.body.dataset.user = getCurrentUser();
 
-  const isHome = document.body.dataset.page === "home";
-  if (isHome) {
+  const page = document.body.dataset.page;
+  if (page === "home") {
     document.title = site.siteName;
   }
 
   buildHeader();
-  if (isHome) {
+  if (page === "home") {
     buildHero();
+  }
+  if (page === "my-gallery") {
+    await buildMyGallery();
   }
 })();
