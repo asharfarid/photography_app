@@ -23,13 +23,15 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
    deleted. New certainties get the next free `SP-n`.
 3. §3 is grouped by service type (`OD-H`, `OD-I`, …). Move an item to DECIDED only
    when the owner explicitly says so, and record why.
-4. Append to §9; never rewrite or reorder past entries (older ones may be compressed).
+4. Append to §9; never rewrite, reorder, compress or delete past entries. The owner
+   approves any cut, after review.
 5. Preserve IDs. Grouped IDs (`OD-H`, `OD-C1`) are allowed; never renumber.
 6. Update `last_updated` in the front matter on every write.
 7. Modify only the repo and the storage mirror (`..\Storage`). Never touch global
    git config or anything else outside these unless explicitly asked.
 8. Commit at **milestones only** — not every experiment.
-9. Keep this file under ~600 lines; compress §9 history when over; never delete SPs.
+9. **No automatic compression, ever.** If this file grows large, report the size and
+   propose a cut list; nothing is cut until the owner approves. Never delete SPs.
 10. **Plain language, always (SP-11).** Owner is an Azure admin, not a developer.
     Define any unavoidable term in one line.
 11. **Two environments share this repo — detect, never ask.** Windows (`win32`,
@@ -49,10 +51,13 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
     decision.
 15. **Handover format.** Five-line front matter (`environment`, `machine`,
     `last_session`, `sessions`); entries **newest first**; the eight headings in
-    §0.2; ≤60 lines per entry; entries older than three sessions compress to
-    three bullets, never deleted. The Git section is always three lines and
-    describes the **start**, never the end. A file with no front matter (an older
-    handover) is read by the date in its newest entry title.
+    §0.2; ≤60 lines per entry (a writing limit, never retroactive). Entry titles
+    carry **date + time in UTC**: `## YYYY-MM-DD HH:MM UTC — <environment> —
+    session <n>`. `sessions` counts entries, so a second `git end` on the same day
+    is a **new entry**, never a rewrite. **Past entries are never edited,
+    compressed or deleted**; the owner approves any cut. The Git section is always
+    three lines and describes the **start**, never the end. A file with no front
+    matter (an older handover) is read by the date and time in its newest title.
 16. **A stale handover is normal.** An older date means that environment has not
     been used since. Never write to it, never "complete" it, never report it as
     a problem.
@@ -69,13 +74,17 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 4. Park undecided ideas in `app_v1/ideas.md` (next free `I-n`); mark promoted ones.
 5. Append the session to §9.
 6. Update §10 and §13.
-7. Write your handover entry (newest first) and bump `last_session`, `sessions`.
+7. Write your handover entry (newest first, date + time in UTC) and bump
+   `last_session`, `sessions`. Every run is a new entry; never edit an old one.
 8. Self-check and print: headings 8/8 · every decision has a pointer · Git 3
    lines · files written · files untouched.
 9. Report what was recorded and what could not be verified.
 10. Do not commit, do not push.
 
 ### 0.2 Handover headings — exactly these eight, in this order
+
+Entry title: `## YYYY-MM-DD HH:MM UTC — <environment> — session <n>` (UTC so both
+machines compare cleanly; a second run on the same day is a new entry).
 
 | Heading | Its only job |
 |---|---|
@@ -145,6 +154,12 @@ SEO/marketing, multi-region.
 | SP-23 | **Upload limits:** 500 MB, ~200 MP, formats **JPEG/PNG/WebP/HEIC/TIFF/RAW**. PDF and SVG are rejected. Validation reads the file's bytes, never the extension | ACTIVE | 2026-11-27 |
 | SP-24 | **The server resolves the owner**; a client-sent id is ignored. Ids and paths are pattern-checked and confined to the storage root. `store_photos` is readable only by its owner once auth exists | ACTIVE | 2026-11-27 |
 | SP-25 | **`app_v1` is the deployable root:** `server.py`, `storage.py`, `requirements.txt`, `main\`. `HOST`/`PORT`/`STORAGE_ROOT` come from the environment; `serve.cmd`/`serve.ps1` sit **one level above** (repo root) and never deploy | ACTIVE | 2026-11-27 |
+| SP-26 | **Deleted photos go to a private trash for 48 hours.** The folder moves to `_trash\<owner>\<category>\<id>\` with a `deleted.json` holding `deleted_at` (UTC). The 48-hour rule is enforced **by that timestamp at read time**, not by a scheduled job: at 48 h the photo is gone to the app, exact to the second. Removing the bytes is housekeeping (`purge_trash`), selected by `TRASH_PURGE=app\|azure`; in Azure a lifecycle rule on `_trash/` may do it. Trash is invisible in counts, cards, search, cover and `/media` | ACTIVE | 2026-11-27 |
+| SP-27 | **Delete UI lives only inside a category** — never on My Gallery; categories are not deletable. Tick boxes + Select all; a pale-red **Delete** button sits below the toolbar under the bin/`+` pair and turns solid red once ≥1 photo is ticked; confirming shows a popup with the count and the 48-hour disclaimer; the result reads "3 deleted / 1 failed", and a failed photo stays in the grid to retry | ACTIVE | 2026-11-27 |
+| SP-28 | **Restore is the second item in the `+` menu** ("Upload from device" / "Restore deleted photos"). The tray lists deleted photos newest first with thumbnail, name and hours left. Restoring opens the **upload form pre-filled** (name, description, category all editable); a taken name shows the same inline error as a fresh upload; the photo returns to the chosen category and becomes its cover if that category was empty | ACTIVE | 2026-11-27 |
+| SP-29 | **Upload has an optional Description** — max 300 characters, stored in `photo.json`, shown under the camera details in the lightbox | ACTIVE | 2026-11-27 |
+| SP-30 | **A cover is never empty while photos exist:** deleting the cover auto-reassigns to another photo; an empty category card disappears (already the render rule). The manual cover picker stays deferred (`NA-21`) | ACTIVE | 2026-11-27 |
+| SP-31 | **The site header shows where you are**, as non-clickable text in the centre: "My Gallery", or the category label ("Landscape"). It is hidden on narrow phones if it cannot fit; the site name stays left and the nav right | ACTIVE | 2026-11-27 |
 
 Derived constraints (consequences, not new decisions):
 
@@ -202,6 +217,7 @@ Old flat IDs `OD-1…OD-17` were folded into these groups on 2026-11-22.
 | Next.js server (Node on server in Stage 1) | Extra machinery, no Stage 1 benefit | 2026-11-23 |
 | One storage container per user | N users = N copies of every rule (access, lifecycle, tiers, CORS, cost report); one forgotten rule leaks a paid photo. Superseded by SP-17 | 2026-11-25 |
 | Fake password / pretend login | Security theatre: the password sits in plain sight, teaches the wrong habit, and gets deleted later. Superseded by SP-16 | 2026-11-25 |
+| Delete a whole category | Too destructive; an empty category card already disappears on its own, and photos can be deleted one by one | 2026-11-27 |
 
 ---
 
@@ -241,6 +257,10 @@ Design rules:
   Cards and grids load `thumb`; an opened photo loads `display`; `original` only
   on Download. `photo.json` also carries the camera settings, so no page ever
   reads EXIF from an image.
+- **Deleting moves the photo folder to `_trash\<owner>\<category>\<id>\`** with a
+  `deleted.json` (`deleted_at`, UTC). The app hides anything older than 48 hours
+  the moment it reads; a purge function only reclaims disk (SP-26). Restoring
+  moves the folder back into the chosen category (SP-28).
 - The photo list **is the folder listing**, not a stored array. A folder without
   `photo.json` is an unfinished upload and is never shown.
 - Site artwork (backgrounds) lives in the app (`app_v1\main\artwork`), not in
@@ -273,6 +293,9 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 - [x] **Stage B — local upload server + gallery view** (2026-11-27):
       `server.py`, `storage.py`, `/api/upload`, `/api/photos`, `/media`;
       `+` → wizard; category grid + lightbox; three copies per photo
+- [ ] **Delete + 48-hour trash + restore + description** — designed 2026-11-27
+      (SP-26…SP-29); not built yet (`NA-26`…`NA-29`)
+- [ ] **Header location trail** (SP-31, `NA-30`)
 - [ ] Real login for other users (`OD-I`), records (`OD-R`), upload rules (`OD-C7`)
 - [ ] Host bake-off (`OD-H`), storage account, publish script, budget alert, launch
 
@@ -475,6 +498,27 @@ Git conventions:
   file available).
 - **Cleanup:** test photos removed; the three containers exist and are empty.
 
+### 2026-11-27 23:10 UTC — Session 13: Codespaces — delete/restore design + memory rules
+- **Environment:** GitHub Codespaces (Linux), `/workspaces/photography_app`, at
+  `49e7ccd` on `main`, clean, 0 ahead / 0 behind `origin/main`. No browser here.
+- **Goal:** design delete + restore for My Gallery, and settle handover retention.
+- **Owner decisions promoted:** SP-26 (48-hour private trash, timestamp not job),
+  SP-27 (bin only inside a category; multi-select; Delete bar; confirm + result),
+  SP-28 (`+` → Restore tray; prefilled form), SP-29 (optional 300-char
+  description), SP-30 (cover auto-reassign, empty card disappears), SP-31
+  (header centre location trail).
+- **Category deletion rejected** (§3.3): too destructive; empty cards vanish on
+  their own.
+- **Retention design:** `deleted_at` (UTC) checked at read time is the rule;
+  `purge_trash` is only disk housekeeping, switchable by `TRASH_PURGE=app|azure`.
+  Azure may use a `_trash/` lifecycle rule instead — no rewrite, one config flag.
+- **Memory rules changed (owner):** no automatic compression anywhere (§0 rules
+  4, 9, 15, §0.1 step 7); entries keep date + time in UTC in the title; a second
+  `git end` on the same day is a new entry; cuts only after owner review.
+- **Not built:** no code changed this session — the design is the deliverable.
+- **Close-out:** `cloud_handover.md` Session 3; NAs `NA-26`…`NA-31` added;
+  `NA-20` narrowed to rename only. No commit or push by the AI.
+
 ---
 
 ## 10. Next actions
@@ -490,8 +534,8 @@ Git conventions:
 - [x] **NA-18** ~~Wire the `+` button~~ — done 2026-11-27; `⚙` still inert
 - [ ] **NA-19** Strip GPS from non-JPEG originals (HEIC/TIFF/WebP); RAW cannot
       be edited in place
-- [ ] **NA-20** Delete and rename UI — rules defined (SP-19); a deleted cover
-      must be reassigned
+- [ ] **NA-20** Rename UI — delete half moved to `NA-26`; a deleted cover must be
+      reassigned (`SP-30`)
 - [ ] **NA-21** Cover picker behind `⚙`; preferences stay in app data until `OD-R`
 - [ ] **NA-22** Upload a real RAW file and confirm the preview path
 - [ ] **NA-23** Admin console: per-user counts **computed from storage**, never stored
@@ -500,6 +544,21 @@ Git conventions:
 - [ ] **NA-25** Download name: `sanitise(photo.name) + extension from
       photo.urls.original`, so Windows gets `Sunrise Test.jpg` instead of a name
       with no extension (and no invalid characters)
+- [ ] **NA-26** Build the delete UI (`SP-27`): bin left of `+` inside a category
+      only, tick boxes + Select all, pale→solid red Delete bar, confirm popup with
+      the 48-hour disclaimer, "3 deleted / 1 failed" result
+- [ ] **NA-27** Build the trash (`SP-26`): `_trash\<owner>\<category>\<id>\` +
+      `deleted.json`, hide at 48 h by `deleted_at` (UTC), `purge_trash`, and the
+      `TRASH_PURGE=app|azure` switch; keep trash out of counts/search/`/media`
+- [ ] **NA-28** Build restore (`SP-28`): second `+` item, tray newest first with
+      thumbnail/name/hours left, prefilled form, name-clash error, category change
+- [ ] **NA-29** Add the optional description (`SP-29`): 300 chars, `photo.json`,
+      shown under camera details in the lightbox
+- [ ] **NA-30** Header location trail (`SP-31`): centre text, non-clickable,
+      "My Gallery" / category label, hidden when it cannot fit
+- [ ] **NA-31** Verify delete/restore (`SP-26`…`SP-30`): cover reassign, empty
+      card disappears, name freed then reused, partial failure, exact 48-hour
+      boundary, phone layout
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -597,3 +656,4 @@ process, environment-configured, no framework.
 | 2026-11-26 | Session 9 (Codespaces): My Gallery toolbar + dormant category cards, `users_gallery.json`. Session 10 (Windows): cross-environment protocol (§0 rules 11–16, §0.1, §0.2), `AI_Support.md` → `ai_support.md`, push-after-`git end` rule, §8 remote, §11 folder-is-truth, NA-17/NA-18 | Owner works in two environments and will not paste a handover prompt each session |
 | 2026-11-26 | Session 11 (Codespaces): `git start`/`git end` protocol run only; no code or decisions changed; `cloud_handover.md` given front matter + Session 2 entry | First end-to-end run of the two-keyword workflow |
 | 2026-11-27 | Session 12 (Windows): Stage B built — `server.py`, `storage.py`, wizard, grid + lightbox; SP-19…SP-25; `OD-C6` decided, `OD-C7` partly; §4/§5/§8/§10/§11 rewritten; §0 rule 17; launchers moved to the repo root; `NA-24`/`NA-25` added | Upload works locally end to end; three copies per photo; `app_v1` is now exactly what deploys |
+| 2026-11-27 | Session 13 (Codespaces): delete/restore design — SP-26…SP-31; category deletion rejected; NA-26…NA-31 added, NA-20 narrowed to rename; **no automatic compression** in §0 rules 4, 9, 15 and §0.1; handover titles now date + time in UTC, every run a new entry | Owner wants undo safety without a scheduler, and a diary that is never shrunk behind his back |

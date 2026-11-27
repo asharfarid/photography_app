@@ -1,11 +1,63 @@
 ---
 environment: cloud
 machine: GitHub Codespaces (Linux)
-last_session: 2026-11-26
-sessions: 2
+last_session: 2026-11-27
+sessions: 3
 ---
 
 # Cloud Handover — GitHub Codespaces
+
+## 2026-11-27 23:10 UTC — cloud — session 3
+
+### Session
+- Branch `main`, started at `49e7ccd`, 0 ahead / 0 behind `origin/main`; tree clean.
+- Goal: design delete + restore for My Gallery, and fix the handover retention rules.
+
+### Start here
+- **Design is done, code is not written.** Next build is delete/restore/description
+  (`NA-26`…`NA-31`), rules in §2 `SP-26`…`SP-31`.
+- The 48-hour rule is a **timestamp check at read time** (`deleted_at`, UTC), not a
+  scheduled job; `purge_trash` only reclaims disk (`TRASH_PURGE=app|azure`).
+- The diary is **never compressed** now; entries carry date + time in UTC, and every
+  `git end` is a new entry.
+
+### Changes
+- `ai_support.md` — §0 rules 4, 9, 15 and §0.1 step 7 rewritten (no compression);
+  §0.2 title format; §2 `SP-26`…`SP-31`; §3.3 category deletion rejected;
+  §4 trash layout; §5 roadmap rows; §9 Session 13; §10 `NA-20` narrowed and
+  `NA-26`…`NA-31` added; §13 changelog row.
+- `cloud_handover.md` — front matter (`last_session`, `sessions: 3`) and this entry.
+- No app, code, data or server files touched.
+
+### Decisions
+- 48-hour private trash, timestamp not job → §2 SP-26
+- Bin only inside a category; multi-select + Delete bar + confirm → §2 SP-27
+- `+` → Restore tray, prefilled upload form → §2 SP-28
+- Optional 300-char description → §2 SP-29
+- Cover auto-reassigns; empty card disappears → §2 SP-30
+- Header centre location trail → §2 SP-31
+- Category deletion rejected → §3.3
+- Diary never shrunk; UTC date+time titles; new entry per run → §0 rules 4, 9, 15
+
+### Ideas parked
+- None new; the description field went straight to SP-29.
+
+### Open / unverified
+- Nothing built or browser-tested this session — it was design only.
+- Cover picker still not built (`NA-21`); rename UI still open (`NA-20`).
+- `NA-19` (GPS in non-JPEG originals), `NA-22` (real RAW), `NA-23` (admin counts),
+  `NA-24` (phone test), `NA-25` (download filename) all stand.
+
+### Next steps
+1. Build `NA-26` + `NA-27` first (delete UI + trash), then `NA-28` (restore).
+2. Add the description field (`NA-29`) and the header trail (`NA-30`).
+3. Run the verification list (`NA-31`) on Windows, where a browser exists.
+4. Keep `NA-25` and `NA-24` in the same testing pass if time allows.
+
+### Git
+- Session start: `49e7ccd` on main, 0 ahead / 0 behind origin
+- Work at close: 2 modified — left uncommitted for the owner
+- Commit/push: none by the AI
 
 ## 2026-11-26 — GitHub Codespaces (Linux) — Session 2
 
