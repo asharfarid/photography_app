@@ -1,14 +1,63 @@
 ---
 environment: local
 machine: Windows (DESKTOP-661R4KD)
-last_session: 2026-11-26
-sessions: 1
+last_session: 2026-11-27
+sessions: 2
 ---
 
 # local_handover — Windows session diary
 
 Written only by the local (Windows) environment. Protocol: `ai_support.md` §0,
 rules 11–16. Entries newest first.
+
+## 2026-11-27 — local — session 2
+
+### Session
+- Branch `main`, started at `28c84a7`, 0 ahead / 0 behind `origin/main`; tree clean.
+- Goal: build Stage B — a local upload server, so one real photo can be uploaded.
+
+### Start here
+- Stage B works: run `serve.cmd` at the repo root, open `http://localhost:8000`.
+- `app_v1` is exactly what deploys; the two launchers sit one level above it.
+- Nothing is committed — all Stage B work is uncommitted on disk.
+
+### Changes
+- New: `app_v1/server.py`, `app_v1/storage.py`, `app_v1/requirements.txt`.
+- Modified: `app_v1/main/js/app.js`, `app_v1/main/css/site.css`,
+  `app_v1/main/data/users_gallery.json` (`photos[]` removed), `.gitignore`.
+- Moved: `app_v1/serve.cmd`, `app_v1/serve.ps1` → repo root.
+- Deleted: `app_v1/__pycache__` (scratch, regenerates).
+
+### Decisions
+- One folder per photo, id-named, `photo.json` written last → §2 SP-19.
+- Three copies per photo: thumb / display / original → §2 SP-20.
+- Copies made server-side at upload; failure keeps the photo → §2 SP-21.
+- GPS stripped from all copies; camera settings kept → §2 SP-22.
+- 500 MB / ~200 MP; JPEG/PNG/WebP/HEIC/TIFF/RAW, content-sniffed → §2 SP-23.
+- Owner resolved server-side; paths confined → §2 SP-24.
+- `app_v1` is the deployable root; launchers above it → §2 SP-25.
+- `OD-C6` decided, `OD-C7` partly → §3.2.
+
+### Ideas parked
+- None new; `I-4`, `I-5`, `I-11`, `I-12` promoted.
+
+### Open / unverified
+- RAW upload path never run — no RAW file available (`NA-22`).
+- GPS stripped from JPEG originals only; HEIC/TIFF/WebP keep metadata (`NA-19`).
+- Delete/rename and the cover picker not built (`NA-20`, `NA-21`).
+- Download name has no extension and is not sanitised (`NA-25`).
+- Never opened from a phone; hotspot steps written but untested (`NA-24`).
+
+### Next steps
+1. Upload one real photo from the laptop; check card, grid, lightbox, download.
+2. Test from the phone: `HOST=0.0.0.0` plus a temporary firewall rule (`NA-24`).
+3. Fix the download filename (`NA-25`).
+4. Plan delete plus cover reassignment (`NA-20`).
+
+### Git
+- Session start: `28c84a7` on main, 0 ahead / 0 behind origin.
+- Work at close: 6 modified, 3 new, 2 moved — left uncommitted for the owner.
+- Commit/push: none by the AI.
 
 ## 2026-11-26 — local — session 1
 

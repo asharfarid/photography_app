@@ -4,7 +4,7 @@ file: ai_support.md
 purpose: Persistent memory + decision log for AI assistant sessions
 schema_version: 2
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-26
+last_updated: 2026-11-27
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
@@ -56,6 +56,9 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 16. **A stale handover is normal.** An older date means that environment has not
     been used since. Never write to it, never "complete" it, never report it as
     a problem.
+17. **Memory updates happen at the start of any build-mode session**, not only
+    at `git end` (owner, 2026-11-27). `git end` stays the close-out; a decision
+    must never wait for it.
 
 ### 0.1 `git end` checklist (run in order)
 
@@ -93,7 +96,7 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 |---|---|
 | Goal | Publicly reachable, HTTPS **photo community** on Azure: owner's gallery first |
 | Product model | "A shop": shop floor = the app; warehouse = one storage account |
-| Current stage | **Stage 1 + Stage 2 merged** (SP-10): owner-only build, identity faked as `786` (SP-16). Four sections — My Gallery, Public Gallery, My Store, Events |
+| Current stage | **Stage 1 + Stage 2 merged** (SP-10): owner-only build, identity faked as `786` (SP-16). Four sections — My Gallery, Public Gallery, My Store, Events. **Stage B (upload) works locally** since 2026-11-27 |
 | Later stages | Real login for other users; Stage 3 events/contests with voting |
 | Owner intent | Learning-first for an **AZ-104 / cloud admin interview**, not just shipping |
 | Subscription | Free/student; will convert the **same** subscription to pay-as-you-go |
@@ -106,7 +109,7 @@ an OpenCode reinstall, or a restored disk. Optimized for machine re-hydration.
 | Working dir | `C:\Stagging\AZ104_free_sub_project\Photography_app` (Windows, pwsh, git 2.54) |
 | App root | `app_v1\main` = the whole site (HTML/CSS/JS/JSON/artwork) |
 | Storage mirror | `C:\Stagging\AZ104_free_sub_project\Storage` — **outside the repo, outside every app version** (SP-15). Empty today; 3 containers agreed |
-| Local run | `app_v1\serve.ps1` (or `serve.cmd`) → `http://localhost:8000`, currently `python -m http.server` — read-only, cannot accept uploads |
+| Local run | `serve.ps1` (or `serve.cmd`) at the repo root → `http://localhost:8000`, runs `app_v1\server.py` — read **and upload** (`/api/upload`, `/api/photos`, `/media`) |
 
 Non-goals near term: custom domain, microservices, native mobile app, payments,
 SEO/marketing, multi-region.
@@ -135,6 +138,13 @@ SEO/marketing, multi-region.
 | SP-16 | **Single-user mode.** One value, `currentUser` in `site.json`, answers "who am I?" for every page through `getCurrentUser()`. No password, no fake login screen. When real login arrives, only that function changes | ACTIVE | 2026-11-25 |
 | SP-17 | **Containers are by purpose, not by person**: `public_photos`, `store_photos`, `event_photos`. A user is a **folder** named by their numeric ID (`786`); a new user needs no provisioning | ACTIVE | 2026-11-25 |
 | SP-18 | **No page writes a storage path.** One function builds it (`photoUrl` / `savePhoto`); pages ask, never assemble. All data access goes through `app.js` — no page calls `fetch()` itself | ACTIVE | 2026-11-25 |
+| SP-19 | **One folder per photo.** The folder name is a server-generated id (`YYYYMMDD-HHMMSS-xxxx`); the user types only a **display name**, unique per user, case-insensitive. `photo.json` inside the folder holds name/facts and is written **last** — its presence means "upload finished". `photos[]` in `users_gallery.json` is retired | ACTIVE | 2026-11-27 |
+| SP-20 | **Three copies per photo:** `thumb.webp` (~400 px), `display.webp` (~1600 px), `original.<ext>` (full resolution, download only). Reason is **viewing speed / mobile data, not disk space** — the two derived copies add ~1% to storage | ACTIVE | 2026-11-27 |
+| SP-21 | **The server makes the copies inside the upload request** (Pillow, pillow-heif, rawpy). Installed **once per machine/deployment** from `requirements.txt`; never per upload, never on the visitor's device. A copy failure never rejects the photo — the card shows a placeholder | ACTIVE | 2026-11-27 |
+| SP-22 | **GPS is stripped from all three copies**; camera settings (aperture, shutter, ISO, lens, focal) are copied into `photo.json` for display. JPEG originals are stripped losslessly; other originals keep their metadata for now (`NA-19`) | ACTIVE | 2026-11-27 |
+| SP-23 | **Upload limits:** 500 MB, ~200 MP, formats **JPEG/PNG/WebP/HEIC/TIFF/RAW**. PDF and SVG are rejected. Validation reads the file's bytes, never the extension | ACTIVE | 2026-11-27 |
+| SP-24 | **The server resolves the owner**; a client-sent id is ignored. Ids and paths are pattern-checked and confined to the storage root. `store_photos` is readable only by its owner once auth exists | ACTIVE | 2026-11-27 |
+| SP-25 | **`app_v1` is the deployable root:** `server.py`, `storage.py`, `requirements.txt`, `main\`. `HOST`/`PORT`/`STORAGE_ROOT` come from the environment; `serve.cmd`/`serve.ps1` sit **one level above** (repo root) and never deploy | ACTIVE | 2026-11-27 |
 
 Derived constraints (consequences, not new decisions):
 
@@ -146,8 +156,9 @@ Derived constraints (consequences, not new decisions):
 - Every lab is **delete-by-default** (auto-shutdown for VMs).
 - Git: commit at **milestones only**.
 - A user is a **folder inside a purpose container**, never a container of its own.
-- **Static website hosting cannot accept an upload or log anyone in.** Once Stage B
-  (uploads) lands, `OD-H` narrows to App Service / Container Apps / a VM.
+- **Static website hosting cannot accept an upload or log anyone in.** Stage B
+  (uploads) has landed locally (2026-11-27), so `OD-H` now excludes Storage
+  static website.
 
 ---
 
@@ -174,8 +185,8 @@ Derived constraints (consequences, not new decisions):
 | `OD-C3` | Look and feel | OPEN | big single photo, simple menu, work grouped in collections |
 | `OD-C4` | Original tier | OPEN | Cool likely; Archive needs long retention |
 | `OD-C5` | Off-machine backup | OPEN (partly met) | `origin` = GitHub added 2026-11-25, so an off-machine copy exists; privacy/retention not formally decided. Local `.git` alone is not a backup |
-| `OD-C6` | Image sizes | OPEN | ~400px thumbnail, ~1600px viewing |
-| `OD-C7` | Member upload rules | OPEN | size/format limits, moderation, per-user quota (~100–200 photos) |
+| `OD-C6` | Image sizes | **DECIDED 2026-11-27** | thumbnail ~400 px, display ~1600 px, original full resolution; both derived copies WebP |
+| `OD-C7` | Member upload rules | **PARTLY DECIDED 2026-11-27** | 500 MB, ~200 MP, JPEG/PNG/WebP/HEIC/TIFF/RAW, PDF/SVG blocked, content sniffing. Quotas (~100–200 photos), moderation and per-user limits still open |
 | `OD-C8` | IaC timing/style, when SP-6 lifts | OPEN | subscription-scope template vs Bicep |
 | `OD-C9` | Image layout + URL paths | **DECIDED 2026-11-25** | relative paths only; **lowercase, no spaces; hyphens or underscores both allowed — be consistent within a folder**. Underscores are legal in URLs, blob names and resource names; "hyphens only" was style, not a constraint. Containers use underscores (`public_photos`) |
 
@@ -224,20 +235,26 @@ Design rules:
 - The app never keeps photos; it only hands out links.
 - One app, three internal rooms (owner, members, events). Split later only with evidence.
 - Database choice deferred to Stage 2 (`OD-R`).
-- Two image sizes per photo in `public_photos`: **thumbnail** (~400 px) for browsing
-  and **display** (~1600–1920 px) for viewing. An optional **master** (up to 100 MB)
-  lives in `store_photos` and is only fetched on download. The browser never loads
-  a master.
+- **One folder per photo**, named by a generated id:
+  `public_photos/<owner>/<category>/<id>/` holding `photo.json` (written last),
+  `thumb.webp` (~400 px), `display.webp` (~1600 px) and `original.<ext>`.
+  Cards and grids load `thumb`; an opened photo loads `display`; `original` only
+  on Download. `photo.json` also carries the camera settings, so no page ever
+  reads EXIF from an image.
+- The photo list **is the folder listing**, not a stored array. A folder without
+  `photo.json` is an unfinished upload and is never shown.
 - Site artwork (backgrounds) lives in the app (`app_v1\main\artwork`), not in
   storage; ~1920 px wide, real WebP. **A file's extension must match its real
   format** — Azure sets `Content-Type` from the name, browsers sniff and lie.
 - Remove camera location data before publishing (privacy).
-- Publish is a local script, not a web portal.
+- Copies are made at upload by the server; a separate publish script is still
+  planned for Azure upload and name normalisation.
 - **Paths:** relative only (`images/nature/x.jpg`), never `C:\...`. Lowercase,
   no spaces — cloud storage is case-sensitive, Windows is not.
 - **Identity:** pages ask `getCurrentUser()`; nothing else knows who is signed in.
-- **Paths are built, never typed:** `photoUrl(owner, kind, category, file)` →
-  `public_photos/786/landscape/x.webp`. Today `owner` is always `786`.
+- **Paths are built, never typed:** the server turns a photo into
+  `/media/<owner>/<category>/<id>/<variant>`; a page only reads `photo.urls`.
+  Today `owner` is always `786`.
 - Keep local folders and cloud folders identical so hosting changes no code.
 
 Deferred until justified: Front Door, Log Analytics, microservices.
@@ -253,7 +270,9 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 - [x] Homepage skeleton (2026-11-23) → **JSON-driven page** (2026-11-24)
 - [x] **Four sections + 2×2 buttons** (2026-11-25): `my_gallery`, `community`,
       `store`, `events`; header name links home; `currentUser` added
-- [ ] **Stage B — local upload server** (`server.py`, `/api/upload`, `/api/photos`) — §11
+- [x] **Stage B — local upload server + gallery view** (2026-11-27):
+      `server.py`, `storage.py`, `/api/upload`, `/api/photos`, `/media`;
+      `+` → wizard; category grid + lightbox; three copies per photo
 - [ ] Real login for other users (`OD-I`), records (`OD-R`), upload rules (`OD-C7`)
 - [ ] Host bake-off (`OD-H`), storage account, publish script, budget alert, launch
 
@@ -316,7 +335,7 @@ C:\Stagging\AZ104_free_sub_project\
 │   ├── public_photos\                every user's public photos; user id = folder
 │   ├── store_photos\                 masters offered for sale
 │   └── event_photos\                 contest entries (Stage 3)
-│       (all three agreed, not created; the folder is empty — see NA-14)
+│       (all three created 2026-11-27; empty after test cleanup)
 └── Photography_app\              THE REPO
     ├── .git\  .gitignore
     ├── ai_support.md             this file — project memory + decision log
@@ -324,11 +343,14 @@ C:\Stagging\AZ104_free_sub_project\
     ├── local_handover.md         Windows session diary (local writes it)
     ├── temp.txt                  project brief (ignored)
     ├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
-    ├── app_v1\                   current app version
+    ├── serve.cmd                 double-click launcher (local only)
+    ├── serve.ps1                 local launcher (never deployed)
+    ├── app_v1\                   THE DEPLOYABLE ROOT (SP-25)
     │   ├── ideas.md              idea parking lot for THIS version (resets per version)
-    │   ├── serve.ps1             local server logic (port 8000)
-    │   ├── serve.cmd             double-click launcher for serve.ps1
-    │   └── main\                 SITE ROOT — lifted to the host as-is
+    │   ├── server.py             static site + upload API + image copies
+    │   ├── storage.py            the one storage seam: disk today, blob later
+    │   ├── requirements.txt      pillow, pillow-heif, rawpy
+    │   └── main\                 SITE ROOT — served by server.py
     │       ├── index.html        home: hero + 2×2 buttons (shell only)
     │       ├── my_gallery.html   ┐
     │       ├── community.html    │ header + white; content arrives in Stage B/C
@@ -338,8 +360,8 @@ C:\Stagging\AZ104_free_sub_project\
     │       ├── js\app.js         reads site.json → header, hero, buttons
     │       ├── data\site.json    siteName, siteNameHref, currentUser, imageBase,
     │       │                     titleBarImage, heroImage, heroText[], nav[], buttons[]
-    │       ├── data\users_gallery.json   per-user firstName + 8 categories
-    │       │                     (photos[] + cover, both empty today)
+    │       ├── data\users_gallery.json   per-user firstName + categories
+    │       │                     (label + cover); photo lists come from storage
     │       └── artwork\          site artwork only (real WebP, not photos)
     ├── labs\                     (planned) 01-storage-static · 02-app-service-f1 ·
     │                             03-functions-api · 04-vm-3tier (SP-5) · 05-static-web-apps
@@ -352,9 +374,6 @@ How the page works: `index.html` is an empty shell → `js/app.js` fetches
 **CSS never reads JSON; only JS does.** `imageBase` in `site.json` is the single
 switch from local artwork to Azure Blob URLs. `getCurrentUser()` is the single
 switch from a faked identity to a real login.
-
-Photo folder target (not built yet): one folder per photo, `thumb` + `display`,
-plus optional `master` in `store_photos`.
 
 Git conventions:
 - Commit at **milestones only**; `main` is the record.
@@ -371,72 +390,28 @@ Git conventions:
 
 ## 9. Conversation log (append-only)
 
-### 2026-11-05 — Session 1
-- Public HTTPS photo site on Azure, learning-first. Locked SP-1, SP-2; hosting matrix.
-
-### 2026-11-08 — Session 2
-- Free/student subscription. Locked SP-3..SP-6 (since revised). ~₹32/mo static estimate.
-
-### 2026-11-19 — Session 3: product shape
-- Community platform, not just a portfolio: owner's work, member posts, events.
-  References: anseladams, jimmychin, artwolfe. Locked SP-7..SP-11; staged delivery.
-
-### 2026-11-22 — Session 4: service grouping + SP cleanup
-- Contradiction review: **SP-3 retired** (hosting open), **SP-4 retired** (no ceiling),
-  **SP-1 tightened** (all photos in one account), **SP-12 added** (least cost).
-- §3 regrouped into `OD-H/I/R/P/D/M/E` + `OD-C1…C8`.
-
-### 2026-11-23 — Session 5: runtime + build approach
-- Second opinion recommended React + Vite; rejected — **SP-13**: hand-written HTML/CSS/JS.
-- **Path rule** (`OD-C9`): relative, lowercase, hyphens, no spaces. WordPress/Wix rejected.
-- Build approach: the **rough homepage is the sketch** — real photos, styling last.
-
-### 2026-11-23 — Session 6: app_v1 skeleton + first homepage
-- **Folder contract:** `app_v1\main` = site root (code only); storage mirror separate.
-- Containers: `c1_my_photos_public`, `c2_my_purchase_store`, `c3_user_photos_public`,
-  `c4_user_purchase_store`, `c5_competitive_events`. (**Replaced 2026-11-25 by SP-17.**)
-- **Photo model:** one folder per photo — `thumb` + `display`; optional `master` for
-  download; the app decides free vs paid (**Stage 4**). Photos still flat originals.
-- `ideas.md` created — parking lot per app version; nothing there is a decision until
-  promoted here.
-- **SP-14:** `.json` data + local server. **Lesson:** extension must match real format.
+### Sessions 1–6 (2026-11-05 → 2026-11-23) — compressed
+- S1: public HTTPS photo site on Azure, learning-first; locked SP-1/SP-2.
+- S2: free/student subscription; SP-3..SP-6 (later revised); ~₹32/mo static estimate.
+- S3: community platform, not a portfolio; SP-7..SP-11; staged delivery.
+- S4: contradiction review — SP-3/SP-4 retired, SP-1 tightened, SP-12 added; §3 grouped.
+- S5: React rejected (SP-13); path rule (`OD-C9`); WordPress/Wix rejected.
+- S6: `app_v1` contract, c1–c5 containers (later replaced), photo model, `ideas.md`, first homepage.
 
 ### 2026-11-24 — Session 7: JSON-driven page, ps1 server, storage moved out
-- **Page became data-driven:** `main\data\site.json` + `main\js\app.js`; `index.html`
-  is a shell. `imageBase` is the single switch for Azure Blob.
-- **Header:** 70 px sticky, `artwork\index_title_bar.webp` (1920×70), name `WeShoot`
-  in mixed case, `nav` reserved (`[]`). **Hero:** natural height, no crop.
-- **Server:** `serve.ps1` + `serve.cmd`, port 8000. Python 3.11 is on PATH.
-- **Storage moved out** to `..\storage_account` (SP-15). ⚠️ **4 photos lost in the
-  move** — `birds_animals\DSC01662.JPG`, `landscape\8d0f4bb2…`, `IMG_1376.JPEG`,
-  `IMG_20260602_1009486120z.jpg` (15 of 19 remain). Files renamed inconsistently —
-  normalise in the publish script.
-- **Trap:** a local server cannot serve above its root; a gallery needs the root at
-  the parent folder or a junction (`mklink /J`).
+- Page became data-driven (`site.json` + `app.js`; `index.html` is a shell);
+  header 70 px sticky, hero natural height, `serve.ps1`/`.cmd` on port 8000.
+- Storage moved out to `..\storage_account` (SP-15); **4 photos lost** in the move
+  (15 of 19 remain); names inconsistent — normalise in the publish script.
 
 ### 2026-11-25 — Session 8: four sections, single-user mode, containers by purpose
-- **Four big buttons** — 2×2 over the hero's lower half, fully transparent, 2 px
-  `#F77D31` border, 18 px radius, hover shadow falling bottom-left (light from the
-  top right) + 4 px blur; block measured at **51 % of the window height**. Below
-  700 px they leave the photo and stack. New pages `my_gallery`, `community`,
-  `store`, `events` — header + white. `WeShoot` is now a link to `index.html`.
-- **Hero** is one line: *"The world looks different through my lens"*.
-- **Anchoring bug found and fixed:** `bottom: 7%` measured from the photo, so on
-  wide/short windows row two fell below the fold (1366×768 clipped by 4 px,
-  1568×700 by 176 px). Now `top: 0` + `height: 100%` +
-  `max-height: calc(100vh - header)` + `align-content: center`.
-- **Type:** weights only — name 700, hero 700, buttons 600. Sizes and colours
-  unchanged (name dark `#3a2a1e`; hero and buttons `#F77D31`).
-- **Single-user mode (SP-16):** `currentUser: "786"` in `site.json`, read through
-  `getCurrentUser()`. No password, no fake login screen.
-- **Containers by purpose (SP-17):** `public_photos`, `store_photos`,
-  `event_photos`; the user is a folder (`786`). One container per user rejected.
-- **Storage renamed** `storage_account` → `..\Storage` and is **empty** — the 15
-  originals were lost with the old folder (NA-14). Containers agreed, not created.
-- **Stage B agreed, not built** — local upload server; full design in §11.
-- **Lesson:** `python -m http.server` sends no cache headers, so Chrome keeps a
-  stale `app.js` and the page looks half-updated. **Ctrl+F5 after every change.**
-  `server.py` will send `Cache-Control: no-store` for html/js/css.
+- Four sections: 2×2 transparent buttons (2 px `#F77D31`, 18 px radius) at 51 %
+  of window height, stack below 700 px; pages `my_gallery`, `community`, `store`,
+  `events`; hero *"The world looks different through my lens"*.
+- SP-16 single-user (`currentUser: "786"`); SP-17 purpose containers; storage
+  renamed `..\Storage` and empty (NA-14); Stage B agreed.
+- Lessons: anchoring needs `top: 0` + `height: 100%` + `max-height`; the stdlib
+  server sends no cache headers — **Ctrl+F5** after changes.
 
 ### 2026-11-26 — Session 9: Codespaces — My Gallery toolbar + category cards
 - **Environment:** GitHub Codespaces (Linux), fresh OpenCode install. Owner spent
@@ -478,6 +453,28 @@ Git conventions:
   NA-14 all remain open.
 - Closed out with `git end`; no commit or push by the AI.
 
+### 2026-11-27 — Session 12: Stage B built — upload, copies, wizard
+- **Environment:** local Windows. Plan reviewed across several rounds; owner set
+  the rule that memory updates happen at build-mode start (§0 rule 17).
+- **Promoted:** SP-19…SP-25; `OD-C6` decided; `OD-C7` partly; §4 photo model
+  rewritten; NA-17 closed.
+- **Built:** `app_v1\server.py` (static + `/api/upload` + `/api/photos` +
+  `/media`, streaming multipart, content sniffing, JPEG GPS strip, HEIC/RAW via
+  pillow-heif/rawpy), `app_v1\storage.py` (the storage seam), `requirements.txt`.
+- **Launchers moved** to the repo root (2026-11-27) so `app_v1` is exactly what
+  deploys; `serve.ps1` now enters `app_v1` before starting.
+- **Close-out:** `.jfif` uploads store as `original.jpg` (format detected, not the
+  extension); the download name still lacks one (`NA-25`). Phone testing written,
+  not run (`NA-24`); delete/rename and the cover picker parked (`NA-20/21`).
+- **Front end:** `+` → menu → wizard (browse, name, category, progress); cards
+  with counts; grid + lightbox + Download original; empty-state hint.
+  `users_gallery.json` shrunk to `firstName` + categories; `photos[]` retired.
+- **Verified:** JPEG upload (3 copies, GPS gone, camera kept), HEIC upload,
+  duplicate name 409, PDF renamed `.jpg` 415, path traversal 404, and a full
+  UI upload with no console errors. RAW path written, **not** tested (no RAW
+  file available).
+- **Cleanup:** test photos removed; the three containers exist and are empty.
+
 ---
 
 ## 10. Next actions
@@ -485,15 +482,24 @@ Git conventions:
 - [ ] **NA-1** Answer `OD-C1` (region) and `OD-C2` (naming/tags)
 - [x] **NA-2** ~~Build the rough homepage as the sketch~~ — skeleton done 2026-11-23
 - [x] **NA-12** ~~Decide homepage content flow~~ — four sections + 2×2 buttons, 2026-11-25
-- [ ] **NA-17** **Settle the photo record shape before Stage B**: is `photos[]` a
-      list of strings or objects? This decides `imageUrl(cover)` in `app.js`
-- [ ] **NA-15** **Build Stage B** — local upload server (§11); see it working in
-      `my_gallery.html` and `store.html` before touching Azure
-- [ ] **NA-16** Create the 3 containers under `..\Storage` and move the user folder
-      layout to `public_photos\786\<category>\`
-- [ ] **NA-13** Build the gallery view: photo list per category, thumbnails,
-      lightbox — depends on NA-15
-- [ ] **NA-18** Wire or disable the `+` and `⚙` toolbar buttons — they do nothing today
+- [x] **NA-17** ~~Settle the photo record shape~~ — Option C + generated id, 2026-11-27
+- [x] **NA-15** ~~Build Stage B~~ — `server.py` + wizard, 2026-11-27 (§11)
+- [x] **NA-16** ~~Create the 3 containers~~ — created 2026-11-27;
+      layout `public_photos\<owner>\<category>\<id>\`
+- [x] **NA-13** ~~Gallery view~~ — category grid + lightbox + download, 2026-11-27
+- [x] **NA-18** ~~Wire the `+` button~~ — done 2026-11-27; `⚙` still inert
+- [ ] **NA-19** Strip GPS from non-JPEG originals (HEIC/TIFF/WebP); RAW cannot
+      be edited in place
+- [ ] **NA-20** Delete and rename UI — rules defined (SP-19); a deleted cover
+      must be reassigned
+- [ ] **NA-21** Cover picker behind `⚙`; preferences stay in app data until `OD-R`
+- [ ] **NA-22** Upload a real RAW file and confirm the preview path
+- [ ] **NA-23** Admin console: per-user counts **computed from storage**, never stored
+- [ ] **NA-24** Test from a phone over the laptop hotspot: `HOST=0.0.0.0` plus a
+      temporary firewall rule for TCP 8000; remove the rule afterwards
+- [ ] **NA-25** Download name: `sanitise(photo.name) + extension from
+      photo.urls.original`, so Windows gets `Sunrise Test.jpg` instead of a name
+      with no extension (and no invalid characters)
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -508,51 +514,45 @@ Git conventions:
 
 ---
 
-## 11. Stage B — upload server (agreed 2026-11-25, not built)
+## 11. Stage B — upload server (BUILT 2026-11-27)
 
-Goal: upload a photo from `my_gallery.html` / `store.html` and have it land in the
-storage mirror, without any page knowing whether the target is a disk or a blob.
-
-**Why `python -m http.server` cannot do it:** it is read-only. A POST returns
-`501 Unsupported method`. It serves files; it cannot accept one.
-
-**Shape — one file, ~80 lines, no installs:**
+One process serves the site and the API: `app_v1\server.py` on `127.0.0.1:8000`.
 
 ```
-browser --POST /api/upload-->  server.py --writes--> ..\Storage\public_photos\786\landscape\<name>
-browser --GET  /media/...-->   server.py --reads -->  ..\Storage\...
-browser --GET  /api/photos-->  server.py --lists -->  ..\Storage\public_photos\786\...
+browser --POST /api/upload-->  server.py --writes--> ..\Storage\public_photos\786\<category>\<id>\
+browser --GET  /media/...-->   server.py --reads -->  the same folder
+browser --GET  /api/photos-->  server.py --lists -->  folder listing + photo.json
 ```
 
-- `server.py` replaces `python -m http.server`; `serve.ps1` starts it. **The server
-  root stays `app_v1\main`** — the browser never sees the storage folder. The
-  server writes by absolute path, server-side. No junction, no parent root needed.
-- Bind to `127.0.0.1` only. With no auth, `0.0.0.0` would let anyone on the local
-  network upload.
-- Front end calls one function: `savePhoto(owner, kind, category, fileBytes)`.
-  Today it posts to `/api/upload`; later it puts to the blob container. Pages never
-  change. Same for `loadPhotos()` → `/api/photos`.
-- **One file at a time** (owner's call); no multi-select.
-- No resize, no EXIF strip yet — that is the publish pipeline (`OD-P`). Files land
-  exactly as uploaded, a 7 MB phone photo stays 7 MB.
-- Categories (8; `events` dropped because it is now a section of its own):
-  `abstract`, `birds_animals`, `landscape`, `life_style`, `micro_lense`,
-  `portraits`, `sky`, `travel`.
-- Filename: keep the original for now, normalise in the publish script. The owner
-  is considering asking for a unique name per folder — undecided.
-- Show a simple list of uploaded files under the upload box, so success is visible
-  without opening Explorer.
-- **The folder is the truth; the JSON is the preferences.** Photo lists are read
-  from `public_photos\<id>\<category>\`; `users_gallery.json` holds only what a
-  folder cannot express (display name, chosen cover, category order, background).
-  Never keep a second copy of the file list — two lists always drift.
-- **Not in Stage B:** login, tokens, database, per-user quotas, moderation.
+- Root stays `app_v1\main`; the storage folder is never reachable from the browser.
+- The owner comes from `current_owner()` (site.json today, login later); a
+  client-sent id is ignored (SP-24).
+- Upload path: stream the body to a temp file → validate by bytes → generated id
+  → original → strip JPEG GPS → `display.webp` + `thumb.webp` → `photo.json`
+  **last** → atomic rename into place. A failed upload leaves nothing behind.
+- Limits: 500 MB, ~200 MP; JPEG/PNG/WebP/HEIC/TIFF/RAW; PDF/SVG rejected.
+- A copy failure keeps the upload and shows a placeholder (SP-21).
+- **One file at a time**; no drag-and-drop.
+- **Storage seam:** `storage.py` exposes save / list / file_path / delete. A blob
+  implementation replaces the disk one later, chosen by `STORAGE_BACKEND`.
+- **The folder is the truth; the JSON is the preferences.** The photo list is the
+  folder listing; `users_gallery.json` holds only what a folder cannot express
+  (display name, cover, category order). Never a second list.
+- **Not in Stage B:** login, quotas, moderation, delete/rename UI, cover picker,
+  admin console.
+- **Testing from a phone:** set `HOST=0.0.0.0` plus a temporary inbound firewall
+  rule for TCP 8000, then open `http://<laptop-ip>:8000`; anyone on that network
+  can upload while open — own hotspot only, remove the rule afterwards.
+- **Downloads keep the real extension** (a `.jfif` is stored as `original.jpg`);
+  the suggested download name still lacks one (`NA-25`).
 
-**Azure later:** swap `..\Storage` for the container and `/media/` for the blob URL
-(or a SAS link). `site.json → imageBase` already covers reads.
+**Azure later:** implement the blob version of `storage.py`, point `STORAGE_ROOT`
+at the mount (or use the blob backend) and serve `/media/` from the container or a
+SAS link. Pages do not change; they already read `photo.urls`.
 
-**What this breaks:** accepting a write and knowing who sent it needs a host that
-runs code — so `OD-H` can no longer be Storage static website once Stage B lands.
+**Consequence:** uploads need a host that runs code, so `OD-H` excludes Storage
+static website. App Service, Container Apps, a VM or Kubernetes all fit: one
+process, environment-configured, no framework.
 
 ---
 
@@ -596,3 +596,4 @@ runs code — so `OD-H` can no longer be Storage static website once Stage B lan
 | 2026-11-25 | SP-10 revised (stages 1+2 merged); SP-16/17/18 added; `OD-C9` decided (underscores allowed); containers `c1…c5` → 3 purpose containers; `storage_account` → `Storage`; §4 rewritten; §11 Stage B added; §5/§8/§10 updated | Four sections built; owner wants the site built once for "a signed-in user" and asked what must exist now so Stage B and real login need no rewrite |
 | 2026-11-26 | Session 9 (Codespaces): My Gallery toolbar + dormant category cards, `users_gallery.json`. Session 10 (Windows): cross-environment protocol (§0 rules 11–16, §0.1, §0.2), `AI_Support.md` → `ai_support.md`, push-after-`git end` rule, §8 remote, §11 folder-is-truth, NA-17/NA-18 | Owner works in two environments and will not paste a handover prompt each session |
 | 2026-11-26 | Session 11 (Codespaces): `git start`/`git end` protocol run only; no code or decisions changed; `cloud_handover.md` given front matter + Session 2 entry | First end-to-end run of the two-keyword workflow |
+| 2026-11-27 | Session 12 (Windows): Stage B built — `server.py`, `storage.py`, wizard, grid + lightbox; SP-19…SP-25; `OD-C6` decided, `OD-C7` partly; §4/§5/§8/§10/§11 rewritten; §0 rule 17; launchers moved to the repo root; `NA-24`/`NA-25` added | Upload works locally end to end; three copies per photo; `app_v1` is now exactly what deploys |

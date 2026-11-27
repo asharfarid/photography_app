@@ -1,0 +1,6 @@
+# weshoot - server dependencies
+# Install once per machine / deployment:  python -m pip install -r requirements.txt
+# The repository carries this recipe; the machine carries the installed copies.
+pillow>=12.0,<13
+pillow-heif>=1.0
+rawpy>=0.25

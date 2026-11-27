@@ -43,4 +43,7 @@ Rules:
 
 | Idea | Promoted to | Date |
 |---|---|---|
-| — | — | — |
+| I-4 | §2 SP-20 — three copies per photo | 2026-11-27 |
+| I-5 | `serve.cmd` / `serve.ps1` built (now at the repo root) | 2026-11-27 |
+| I-11 | Category grid + lightbox built (`NA-13`) | 2026-11-27 |
+| I-12 | §2 SP-19 — unique display name, generated folder id | 2026-11-27 |

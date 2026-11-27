@@ -14,8 +14,11 @@ tmp/
 out/
 *.log
 temp.txt
+__pycache__/
+*.pyc
 
 # ---- Media payloads: live on disk / in Azure, never in git ----
+Storage/
 
 # ---- OS noise ----
 Thumbs.db
