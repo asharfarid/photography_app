@@ -33,7 +33,11 @@
       body = {};
     }
     if (!response.ok) {
-      throw new Error(body.error || "Request failed (" + response.status + ")");
+      const failure = new Error(
+        body.error || "Request failed (" + response.status + ")"
+      );
+      failure.status = response.status;
+      throw failure;
     }
     return body;
   }
@@ -89,18 +93,51 @@
       }
       header.appendChild(nav);
     }
-
-    const where = document.createElement("span");
-    where.className = "site-where";
-    where.id = "site-where";
-    header.appendChild(where);
   }
 
-  function setWhere(text) {
-    const where = document.getElementById("site-where");
-    if (where) {
-      where.textContent = text || "";
+  /* ---------- page head (one style, every page) ---------- */
+
+  const PAGE_TITLES = {
+    home: "Homepage",
+    "my-gallery": "My Gallery",
+    community: "Public Gallery",
+    store: "My Store",
+    events: "Events",
+  };
+
+  function pageHead(options) {
+    const settings = options || {};
+
+    const head = document.createElement("div");
+    head.className = "page-head";
+
+    if (settings.backLabel) {
+      let back;
+      if (settings.onBack) {
+        back = document.createElement("button");
+        back.type = "button";
+        back.addEventListener("click", settings.onBack);
+      } else {
+        back = document.createElement("a");
+        back.href = settings.backHref || "index.html";
+      }
+      back.className = "btn-ghost";
+      back.textContent = "\u2190 " + settings.backLabel;
+      head.appendChild(back);
     }
+
+    const title = document.createElement("h2");
+    title.textContent = settings.title || "";
+    head.appendChild(title);
+
+    if (settings.count) {
+      const tally = document.createElement("span");
+      tally.className = "muted";
+      tally.textContent = settings.count;
+      head.appendChild(tally);
+    }
+
+    return head;
   }
 
   /* ---------- home page only ---------- */
@@ -144,7 +181,26 @@
       hero.appendChild(nav);
     }
 
+    main.appendChild(pageHead({ title: PAGE_TITLES.home }));
     main.appendChild(hero);
+  }
+
+  const INNER_TITLES = {
+    "community.html": "Public Gallery",
+    "store.html": "My Store",
+    "events.html": "Events",
+  };
+
+  function buildInnerPage() {
+    const main = document.getElementById("site-main");
+    const file = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    const title = INNER_TITLES[file] || "";
+    if (!title) {
+      return;
+    }
+    main.appendChild(
+      pageHead({ backLabel: "Homepage", backHref: "index.html", title })
+    );
   }
 
   /* ---------- my gallery: state ---------- */
@@ -405,7 +461,6 @@
       return;
     }
     content.textContent = "";
-    setWhere(activeCategory ? categoryLabel(activeCategory) : "My Gallery");
     updateDeleteBar();
     if (activeCategory) {
       renderCategory(activeCategory);
@@ -420,6 +475,15 @@
       : [];
     const withPhotos = categories.filter(
       (category) => photosIn(category.id).length > 0
+    );
+
+    content.appendChild(
+      pageHead({
+        backLabel: "Homepage",
+        backHref: "index.html",
+        title: PAGE_TITLES["my-gallery"],
+        count: plural(photos.length, "photo"),
+      })
     );
 
     if (withPhotos.length === 0) {
@@ -488,31 +552,19 @@
   function renderCategory(categoryId) {
     const list = photosIn(categoryId);
 
-    const head = document.createElement("div");
-    head.className = "category-view-head";
-
-    const back = document.createElement("button");
-    back.type = "button";
-    back.className = "btn-ghost";
-    back.textContent = "\u2190 All categories";
-    back.addEventListener("click", () => {
-      activeCategory = null;
-      selecting = false;
-      selected.clear();
-      render();
-    });
-    head.appendChild(back);
-
-    const title = document.createElement("h2");
-    title.textContent = categoryLabel(categoryId);
-    head.appendChild(title);
-
-    const tally = document.createElement("span");
-    tally.className = "muted";
-    tally.textContent = plural(list.length, "photo");
-    head.appendChild(tally);
-
-    content.appendChild(head);
+    content.appendChild(
+      pageHead({
+        backLabel: "All categories",
+        onBack: () => {
+          activeCategory = null;
+          selecting = false;
+          selected.clear();
+          render();
+        },
+        title: categoryLabel(categoryId),
+        count: plural(list.length, "photo"),
+      })
+    );
 
     if (list.length === 0) {
       const hint = document.createElement("p");
@@ -661,7 +713,8 @@
     window.setTimeout(() => note.remove(), 4500);
   }
 
-  function confirmDialog(title, note) {
+  function confirmDialog(title, note, options) {
+    const settings = options || {};
     return new Promise((resolve) => {
       const backdrop = document.createElement("div");
       backdrop.className = "modal-backdrop";
@@ -686,12 +739,12 @@
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "btn-ghost";
-      cancel.textContent = "Cancel";
+      cancel.textContent = settings.cancelLabel || "Cancel";
 
       const confirm = document.createElement("button");
       confirm.type = "button";
       confirm.className = "btn-danger";
-      confirm.textContent = "Delete";
+      confirm.textContent = settings.confirmLabel || "Delete";
 
       actions.appendChild(cancel);
       actions.appendChild(confirm);
@@ -933,7 +986,11 @@
         if (request.status >= 200 && request.status < 300 && body.photo) {
           resolve(body.photo);
         } else {
-          reject(new Error(body.error || "Upload failed (" + request.status + ")"));
+          const failure = new Error(
+            body.error || "Upload failed (" + request.status + ")"
+          );
+          failure.status = request.status;
+          reject(failure);
         }
       });
 
@@ -1013,7 +1070,12 @@
     if (restoring && source) {
       nameInput.value = source.name || "";
     }
-    form.appendChild(field("Name", nameInput));
+    const nameField = field("Name", nameInput);
+    const nameError = document.createElement("p");
+    nameError.className = "field-error";
+    nameError.hidden = true;
+    nameField.appendChild(nameError);
+    form.appendChild(nameField);
 
     const categorySelect = document.createElement("select");
     for (const category of galleryUser.categories || []) {
@@ -1050,6 +1112,12 @@
     progress.hidden = true;
     form.appendChild(progress);
 
+    const exitNote = document.createElement("p");
+    exitNote.className = "wizard-exit-note";
+    exitNote.hidden = true;
+    exitNote.textContent = "Click Cancel to close this window.";
+    form.appendChild(exitNote);
+
     const actions = document.createElement("div");
     actions.className = "wizard-actions";
 
@@ -1079,6 +1147,18 @@
       message.className = "wizard-message" + (kind ? " " + kind : "");
     }
 
+    function showNameError(text) {
+      nameError.hidden = false;
+      nameError.textContent = text;
+      nameError.scrollIntoView({ block: "center", behavior: "smooth" });
+      nameInput.focus({ preventScroll: true });
+    }
+
+    function clearNameError() {
+      nameError.hidden = true;
+      nameError.textContent = "";
+    }
+
     function closeModal() {
       backdrop.remove();
       document.body.classList.remove("no-scroll");
@@ -1086,17 +1166,67 @@
     }
 
     function onKey(event) {
-      if (event.key === "Escape") {
+      if (event.key !== "Escape") {
+        return;
+      }
+      if (document.querySelector(".modal.confirm")) {
+        return;
+      }
+      event.preventDefault();
+      attemptClose();
+    }
+
+    const initial = {
+      name: nameInput.value,
+      description: descriptionInput.value,
+      category: categorySelect.value,
+    };
+
+    function isDirty() {
+      if (!restoring && fileInput && fileInput.files && fileInput.files[0]) {
+        return true;
+      }
+      return (
+        nameInput.value !== initial.name ||
+        descriptionInput.value !== initial.description ||
+        categorySelect.value !== initial.category
+      );
+    }
+
+    function pulseCancel() {
+      cancel.classList.remove("pulse");
+      void cancel.offsetWidth;
+      cancel.classList.add("pulse");
+    }
+
+    async function attemptClose() {
+      if (submit.disabled) {
+        return;
+      }
+      if (!isDirty()) {
+        closeModal();
+        return;
+      }
+      const discard = await confirmDialog(
+        "Discard this photo?",
+        restoring
+          ? "Your changes will be lost. The photo stays in Retention."
+          : "Your chosen photo and details will be lost.",
+        { confirmLabel: "Discard", cancelLabel: "Keep editing" }
+      );
+      if (discard) {
         closeModal();
       }
     }
 
     document.addEventListener("keydown", onKey);
-    cancel.addEventListener("click", closeModal);
+    cancel.addEventListener("click", attemptClose);
     backdrop.addEventListener("click", (event) => {
-      if (event.target === backdrop) {
-        closeModal();
+      if (event.target !== backdrop) {
+        return;
       }
+      exitNote.hidden = false;
+      pulseCancel();
     });
 
     if (fileInput) {
@@ -1148,6 +1278,7 @@
     }
 
     nameInput.addEventListener("input", () => {
+      clearNameError();
       if (nameInput.value.trim()) {
         message.hidden = true;
       }
@@ -1158,7 +1289,7 @@
 
       const name = nameInput.value.trim();
       if (!name) {
-        showMessage("Give the photo a name.");
+        showNameError("Give the photo a name.");
         return;
       }
 
@@ -1166,15 +1297,18 @@
         (photo) => photo.name.toLocaleLowerCase() === name.toLocaleLowerCase()
       );
       if (clash) {
-        showMessage("You already have a photo called \u201c" + name + "\u201d.");
+        showNameError("You already have a photo called \u201c" + name + "\u201d.");
         return;
       }
 
       const file = fileInput ? fileInput.files && fileInput.files[0] : null;
       if (!restoring && !file) {
-        showMessage("Choose a photo first.");
+        showMessage("Choose a photo first.", "error");
+        message.scrollIntoView({ block: "center", behavior: "smooth" });
         return;
       }
+
+      clearNameError();
 
       cancel.disabled = true;
       submit.disabled = true;
@@ -1213,7 +1347,13 @@
         cancel.disabled = false;
         submit.disabled = false;
         progress.hidden = true;
-        showMessage(error.message, "error");
+        const text = error.message || "Something went wrong.";
+        if (error.status === 409 || /already have a photo called/i.test(text)) {
+          showNameError(text);
+        } else {
+          showMessage(text, "error");
+          message.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
       }
     });
   }
@@ -1262,5 +1402,8 @@
   }
   if (page === "my-gallery") {
     await buildMyGallery();
+  }
+  if (page !== "home" && page !== "my-gallery") {
+    buildInnerPage();
   }
 })();

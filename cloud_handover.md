@@ -1,11 +1,60 @@
 ---
 environment: cloud
 machine: GitHub Codespaces (Linux)
-last_session: 2026-11-27
-sessions: 3
+last_session: 2026-11-28
+sessions: 4
 ---
 
 # Cloud Handover — GitHub Codespaces
+
+## 2026-11-28 05:37 UTC — cloud — session 4
+
+### Session
+- Branch `main`, started at `c218781`, 0 ahead / 0 behind `origin/main`; tree clean.
+- Goal: three UI fixes on top of the local build, then close out before the codespace is deleted.
+
+### Start here
+- **The fixes are uncommitted.** Commit and push before deleting this codespace; the
+  next environment gets them from GitHub.
+- Wizard no longer closes on an outside click; one page head on every page; duplicate
+  names now show under the Name field (`SP-34`…`SP-36`).
+- Only static checks ran here — the browser check is `NA-34` on Windows.
+
+### Changes
+- `app_v1/main/js/app.js` — backdrop guard + discard prompt, `pageHead()`, inline name error.
+- `app_v1/main/css/site.css` — `.page-head`, `.field-error`, exit note, cancel pulse;
+  `.site-where` removed.
+- `ai_support.md` — `SP-34`…`SP-36`; `SP-31` retired; §5 ticked; §9 Session 15; §10
+  `NA-27` corrected, `NA-30` marked reverted, `NA-33`/`NA-34` added; §11 retention env;
+  §13 row.
+- `cloud_handover.md` — front matter and this entry.
+
+### Decisions
+- One page head in the content, header keeps only the site name → §2 SP-34
+- Wizard never closes on backdrop; Cancel/Esc ask before discarding → §2 SP-35
+- Errors under the field that caused them, file kept → §2 SP-36
+- Header centre text retired → §2 SP-31 (RETIRED)
+
+### Ideas parked
+- None new.
+
+### Open / unverified
+- No browser here; Pillow is absent so the server was not started — visual check is
+  `NA-34` on Windows.
+- **§9 has no Session 14 entry** — the Windows build session hit its daily limit before
+  `git end`; detail lives in `local_handover.md` Session 3. Left as a gap by the owner.
+- `TRASH_PURGE=azure` is a stub (`NA-33`); `NA-19`, `NA-22`, `NA-24`, `NA-25` stand.
+
+### Next steps
+1. Commit + push from this codespace.
+2. On Windows: pull, run `serve.cmd`, work through `NA-34`.
+3. Build the Public Gallery page (`community.html`), which is still an empty shell.
+4. Backfill the §9 Session 14 gap when convenient.
+
+### Git
+- Session start: `c218781` on main, 0 ahead / 0 behind origin
+- Work at close: 4 modified — left uncommitted for the owner
+- Commit/push: none by the AI
 
 ## 2026-11-27 23:10 UTC — cloud — session 3
 

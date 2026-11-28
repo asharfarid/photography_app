@@ -159,7 +159,10 @@ SEO/marketing, multi-region.
 | SP-28 | **Restore is the second item in the `+` menu** ("Upload from device" / "Restore deleted photos"). The tray lists deleted photos newest first with thumbnail, name and hours left. Restoring opens the **upload form pre-filled** (name, description, category all editable); a taken name shows the same inline error as a fresh upload; the photo returns to the chosen category and becomes its cover if that category was empty. The **original id is kept**, and the chosen category is written back into `photo.json` | ACTIVE (revised 2026-11-28) | 2026-11-27 |
 | SP-29 | **Upload has an optional Description** — max 300 characters, stored in `photo.json`, shown under the camera details in the lightbox | ACTIVE | 2026-11-27 |
 | SP-30 | **A cover is never empty while photos exist:** deleting the cover auto-reassigns to another photo; an empty category card disappears (already the render rule). The manual cover picker stays deferred (`NA-21`) | ACTIVE | 2026-11-27 |
-| SP-31 | **The site header shows where you are**, as non-clickable text in the centre: "My Gallery", or the category label ("Landscape"). It is hidden on narrow phones if it cannot fit; the site name stays left and the nav right | ACTIVE | 2026-11-27 |
+| SP-31 | ~~**The site header shows where you are**, as non-clickable text in the centre: "My Gallery", or the category label ("Landscape"). It is hidden on narrow phones if it cannot fit; the site name stays left and the nav right~~ | **RETIRED** 2026-11-28 — replaced by SP-34: one page head inside the content, header keeps only the site name | 2026-11-27 |
+| SP-34 | **One page head on every page, inside the content:** `[← back] Title [count]`. Homepage → "Homepage" (no back). My Gallery → "← Homepage · My Gallery · N photos". Category → "← All categories · label · N photos". Public Gallery / My Store / Events → "← Homepage · page name". The header carries only the site name (and nav when it exists); it never shows the location | ACTIVE | 2026-11-28 |
+| SP-35 | **The upload/restore wizard never closes on a backdrop click.** A backdrop click shows "Click Cancel to close this window." inside the form and pulses Cancel once. Only Cancel and Esc close it, and they ask "Discard this photo?" (Keep editing / Discard) when the form differs from how it opened or a file is chosen; an untouched form closes straight away; closing is blocked while a save is in flight | ACTIVE | 2026-11-28 |
+| SP-36 | **Errors appear under the field that caused them**, not at the bottom of the form: a duplicate name shows the server's sentence under Name, scrolls it into view, returns the cursor to Name and keeps the chosen file, so a rename plus Upload is all that is needed | ACTIVE | 2026-11-28 |
 | SP-32 | **Per-user data lives in storage, not in the site folder.** `Storage\public_photos\<owner>\gallery.json` holds `firstName`, `categories` and `cover`; the browser gets it from `/api/photos`, never as a static file. `main\data\site.json` keeps site-wide settings only | ACTIVE | 2026-11-28 |
 | SP-33 | **One launcher: `serve.cmd` at the repo root.** It installs requirements once, opens the browser and starts `server.py` itself; `serve.ps1` is deleted. No launcher file is ever deployed | ACTIVE | 2026-11-28 |
 
@@ -300,9 +303,12 @@ Deferred until justified: Front Door, Log Analytics, microservices.
 - [x] **Stage B — local upload server + gallery view** (2026-11-27):
       `server.py`, `storage.py`, `/api/upload`, `/api/photos`, `/media`;
       `+` → wizard; category grid + lightbox; three copies per photo
-- [ ] **Delete + 48-hour trash + restore + description** — designed 2026-11-27
-      (SP-26…SP-29); not built yet (`NA-26`…`NA-29`)
-- [ ] **Header location trail** (SP-31, `NA-30`)
+- [x] **Delete + 48-hour Retention + restore + description** (2026-11-28):
+      SP-26/SP-28 revised; per-user `gallery.json` in storage (SP-32); one launcher
+      (SP-33); `NA-26`…`NA-31` closed
+- [x] **One page head on every page** (2026-11-28): replaces the header centre
+      text (SP-31 retired → SP-34); wizard exit guard (SP-35); inline field
+      errors (SP-36)
 - [ ] Real login for other users (`OD-I`), records (`OD-R`), upload rules (`OD-C7`)
 - [ ] Host bake-off (`OD-H`), storage account, publish script, budget alert, launch
 
@@ -525,6 +531,28 @@ Git conventions:
 - **Close-out:** `cloud_handover.md` Session 3; NAs `NA-26`…`NA-31` added;
   `NA-20` narrowed to rename only. No commit or push by the AI.
 
+### 2026-11-28 05:37 UTC — Session 15: Codespaces — wizard guard, one page head, inline name errors
+- **Environment:** GitHub Codespaces (Linux), `/workspaces/photography_app`, started
+  at `c218781` on `main`, clean, 0 ahead / 0 behind `origin/main`. No browser here.
+- **Note — gap:** there is **no Session 14 entry**. The Windows build session that
+  produced `c218781` hit its daily usage limit before `git end`; its detail is in
+  `local_handover.md` Session 3. The owner chose to leave the gap and backfill later.
+- **Fixed three things (code, not design):**
+  - Wizard no longer closes on a backdrop click; a backdrop click shows the note and
+    pulses Cancel; Cancel/Esc guard with "Discard this photo?" only when dirty, and
+    are blocked while a save is in flight (`SP-35`).
+  - Header centre text removed (`.site-where`, `setWhere`, its CSS); one `pageHead()`
+    now renders `[← back] Title [count]` inside the content on every page (`SP-34`);
+    `SP-31` retired, `NA-30` recorded as built then reverted.
+  - Duplicate-name message moved under the Name field, scrolled into view, cursor
+    returned, chosen file kept; server `409` uses the same slot (`SP-36`).
+- **Files:** `app_v1/main/js/app.js`, `app_v1/main/css/site.css`. No server change.
+- **Verified:** `node --check` and `py_compile` pass; no leftovers of the old header
+  code. **Not run in a browser** — Pillow is absent in this codespace and there is no
+  UI here; visual check is `NA-34` on Windows.
+- **Close-out:** `cloud_handover.md` Session 4; `NA-33` (azure purge stub) and
+  `NA-34` (browser check) added; `NA-27` corrected; §5 ticked. No commit or push.
+
 ---
 
 ## 10. Next actions
@@ -556,19 +584,26 @@ Git conventions:
       popup with the 48-hour disclaimer, "N deleted · M failed" toast
 - [x] **NA-27** ~~Build the retention area (`SP-26`)~~ — done 2026-11-28:
       `Retention\<owner>\<category>\<id>\` + `deleted.json`, hidden at 48 h by
-      `deleted_at` (UTC), `purge_trash`, `TRASH_PURGE=app|azure`
+      `deleted_at` (UTC), `purge_trash`; `TRASH_PURGE` exists but only `app` is
+      written (`azure` is a stub — see `NA-33`)
 - [x] **NA-28** ~~Build restore (`SP-28`)~~ — done 2026-11-28: second `+` item,
       tray newest first with thumbnail/name/hours left, pre-filled form, name-clash
       error, category change, id kept
 - [x] **NA-29** ~~Add the optional description (`SP-29`)~~ — done 2026-11-28:
       300 chars, `photo.json`, shown as text under the camera details
-- [x] **NA-30** ~~Header location trail (`SP-31`)~~ — done 2026-11-28: centre
-      text, non-clickable, "My Gallery" / category label, hidden under 900 px
+- [x] **NA-30** ~~Header location trail (`SP-31`)~~ — built 2026-11-28, then
+      **reverted the same day**: one page head in the content instead (`SP-34`)
 - [x] **NA-31** ~~Verify delete/restore~~ — done 2026-11-28: cover cleared then
       reassigned, empty card disappears, name freed then reused, partial failure,
       expired item → 410, 48-hour read rule, phone-width header
 - [ ] **NA-32** Trash view is a modal, not a page; if the list ever grows past a
       screenful it should become its own page with paging
+- [ ] **NA-33** Write the `TRASH_PURGE=azure` branch (or drop the option) and
+      document `TRASH_RETENTION_HOURS` (default 48) in §11 and the README
+- [ ] **NA-34** Browser check on Windows of the three UI fixes: backdrop click
+      never closes the wizard, the discard prompt appears only when dirty, the
+      page head matches on Homepage / My Gallery / category / inner pages, and a
+      duplicate name shows under the Name field with the file kept
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -614,6 +649,9 @@ browser --GET  /api/trash-->   server.py --lists -->  retention folders still in
   `409`, an expired or missing item is `410`.
 - **Retention is read-time:** anything stamped more than 48 h ago is already gone
   from `/api/trash` and `/trash-media`, even before the bytes are purged.
+- **Retention length** is `TRASH_RETENTION_HOURS` (default 48). **Purge** runs only
+  when `TRASH_PURGE=app` (the default); the `azure` branch is not written yet
+  (`NA-33`), where a lifecycle rule on `Retention/` is the intended equivalent.
 - **Storage seam:** `storage.py` exposes save / list / file_path / trash / restore /
   list_trash / purge_trash / gallery read-write. A blob implementation replaces the
   disk one later, chosen by `STORAGE_BACKEND`.
@@ -682,3 +720,4 @@ process, environment-configured, no framework.
 | 2026-11-27 | Session 12 (Windows): Stage B built — `server.py`, `storage.py`, wizard, grid + lightbox; SP-19…SP-25; `OD-C6` decided, `OD-C7` partly; §4/§5/§8/§10/§11 rewritten; §0 rule 17; launchers moved to the repo root; `NA-24`/`NA-25` added | Upload works locally end to end; three copies per photo; `app_v1` is now exactly what deploys |
 | 2026-11-27 | Session 13 (Codespaces): delete/restore design — SP-26…SP-31; category deletion rejected; NA-26…NA-31 added, NA-20 narrowed to rename; **no automatic compression** in §0 rules 4, 9, 15 and §0.1; handover titles now date + time in UTC, every run a new entry | Owner wants undo safety without a scheduler, and a diary that is never shrunk behind his back |
 | 2026-11-28 | Session 14 (Windows): delete → 48 h Retention → restore built (SP-26/28 revised, SP-32/33 added); per-user `gallery.json` moved into `Storage\public_photos\<owner>\` and `users_gallery.json` deleted; description field (300 chars); header location title; bulk delete bar with tick boxes; restore tray + pre-filled form; `serve.ps1` deleted, `serve.cmd` now standalone; §4/§8/§11 rewritten | Owner approved the plan; one launcher and one place for per-user data |
+| 2026-11-28 | Session 15 (Codespaces): wizard backdrop guard with discard prompt (SP-35); one page head replaces the header centre text (SP-34, SP-31 retired); duplicate-name error inline under Name (SP-36); NA-33/NA-34 added; §9 Session 14 gap noted | Owner lost typed upload details to a stray backdrop click, and wanted one title style on every page |
