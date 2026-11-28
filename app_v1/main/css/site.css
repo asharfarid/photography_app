@@ -719,7 +719,254 @@ body.no-scroll {
   margin-top: 4px;
 }
 
-/* ---------- lightbox ---------- */
+/* ---------- header: where am I ---------- */
+
+[hidden] {
+  display: none !important;
+}
+
+.site-where {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .site-where {
+    display: none;
+  }
+}
+
+/* ---------- my gallery: delete controls ---------- */
+
+.gallery-action-danger {
+  border-color: #b00020;
+  color: #b00020;
+}
+
+.gallery-action-danger:hover {
+  background: rgba(176, 0, 32, 0.08);
+}
+
+.gallery-action.is-active {
+  background: #b00020;
+  color: #fff;
+}
+
+.delete-bar {
+  width: min(1200px, 78%);
+  margin: 14px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px solid #f3c3c8;
+  border-radius: 12px;
+  background: #fdecef;
+}
+
+.delete-select-all {
+  padding: 6px 12px;
+  border: 1px solid #e0a9b0;
+  border-radius: 8px;
+  background: #fff;
+  color: #7a0016;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.delete-count {
+  font-size: 14px;
+  color: #7a0016;
+}
+
+.delete-button {
+  margin-left: auto;
+  padding: 8px 20px;
+  border: 2px solid #b00020;
+  border-radius: 10px;
+  background: transparent;
+  color: #b00020;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-button.armed {
+  background: #b00020;
+  color: #fff;
+}
+
+.delete-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------- my gallery: selection ---------- */
+
+.photo-tile.selectable {
+  cursor: pointer;
+}
+
+.photo-tile.selected {
+  outline: 4px solid #b00020;
+  outline-offset: -4px;
+}
+
+.photo-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.photo-tile.selected .photo-check {
+  background: #b00020;
+}
+
+/* ---------- my gallery: trash tray ---------- */
+
+.trash-modal {
+  width: min(680px, 100%);
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid #f0e4d8;
+  border-radius: 12px;
+}
+
+.trash-thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 54px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f2d3b3;
+}
+
+.trash-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trash-meta {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trash-meta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trash-line {
+  color: #8a7362;
+  font-size: 13px;
+}
+
+/* ---------- dialogs and toasts ---------- */
+
+.modal.confirm {
+  width: min(440px, 100%);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border: 2px solid #b00020;
+  border-radius: 12px;
+  background: #b00020;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #8f001a;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 80;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #2f241c;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.toast.error {
+  background: #b00020;
+}
+
+/* ---------- description ---------- */
+
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d8c3ae;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+.field textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.lightbox-description {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #f2d3b3;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 
 .lightbox {
   position: fixed;

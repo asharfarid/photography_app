@@ -17,8 +17,12 @@ Everything a host needs to change is an environment variable:
 Routes
     GET  /                      the site (app_v1/main)
     GET  /api/photos            every photo of the signed-in user
-    POST /api/upload            multipart: file, name, category
-    GET  /media/<owner>/<cat>/<id>/<file>   photo bytes
+    GET  /api/trash             deleted photos that can still be restored
+    POST /api/upload            multipart: file, name, category, description
+    POST /api/delete            JSON: category, ids[]
+    POST /api/restore           JSON: id, category, name, description
+    GET  /media/<owner>/<cat>/<id>/<file>         live photo bytes
+    GET  /trash-media/<owner>/<cat>/<id>/<file>   deleted photo thumbnails
     GET  /api/health            liveness
 
 The owner is resolved on the server, never taken from the browser. Today that
@@ -38,7 +42,7 @@ import threading
 import traceback
 import uuid
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -66,6 +70,8 @@ MAX_UPLOAD = int(float(os.environ.get("MAX_UPLOAD_MB", "500")) * 1024 * 1024)
 MAX_PIXELS = int(float(os.environ.get("MAX_PIXELS_MP", "200")) * 1_000_000)
 DISPLAY_MAX = int(os.environ.get("DISPLAY_MAX_PX", "1600"))
 THUMB_MAX = int(os.environ.get("THUMB_MAX_PX", "400"))
+TRASH_HOURS = int(os.environ.get("TRASH_RETENTION_HOURS", "48"))
+TRASH_PURGE = os.environ.get("TRASH_PURGE", "app")
 
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
@@ -73,6 +79,20 @@ storage = DiskStorage(STORAGE_ROOT)
 
 SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,80}$")
 SAFE_NAME = re.compile(r"^[a-z0-9_]{1,40}$")
+SAFE_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,60}$")
+
+# The shape a new user starts with. Lives in code, not in the site folder,
+# so per-user data never ships with the website (SP-32).
+DEFAULT_CATEGORIES = (
+    ("abstract", "Abstract"),
+    ("birds_animals", "Birds & Animals"),
+    ("landscape", "Landscape"),
+    ("life_style", "Life Style"),
+    ("micro_lense", "Micro Lense"),
+    ("portraits", "Portraits"),
+    ("sky", "Sky"),
+    ("travel", "Travel"),
+)
 
 EXT = {
     "jpeg": "jpg",
@@ -119,15 +139,55 @@ def current_owner():
     return str(site_config().get("currentUser") or "786")
 
 
-def gallery_config():
-    return load_json(SITE / "data" / "users_gallery.json", {"users": {}})
+def default_gallery():
+    return {
+        "firstName": "Ashar",
+        "categories": [
+            {"id": cid, "label": label, "cover": None}
+            for cid, label in DEFAULT_CATEGORIES
+        ],
+    }
+
+
+def gallery_for(owner):
+    """Per-user preferences live beside the photos, not in the site folder."""
+    data = storage.load_gallery(owner)
+    if not isinstance(data, dict) or not data.get("categories"):
+        data = default_gallery()
+        storage.save_gallery(owner, data)
+    data.setdefault("firstName", owner)
+    return data
 
 
 def categories_for(owner):
-    users = gallery_config().get("users", {})
-    entry = users.get(owner) or {}
-    categories = entry.get("categories") or []
-    return [c for c in categories if isinstance(c, dict) and c.get("id")]
+    return [
+        c for c in gallery_for(owner).get("categories", [])
+        if isinstance(c, dict) and c.get("id")
+    ]
+
+
+def set_cover(owner, category, photo_id):
+    """Point a category at one photo; None falls back to the first photo."""
+    gallery = gallery_for(owner)
+    changed = False
+    for entry in gallery.get("categories", []):
+        if entry.get("id") == category and entry.get("cover") != photo_id:
+            entry["cover"] = photo_id
+            changed = True
+    if changed:
+        storage.save_gallery(owner, gallery)
+
+
+def clear_cover(owner, photo_id):
+    """A deleted photo must never stay the cover (SP-30)."""
+    gallery = gallery_for(owner)
+    changed = False
+    for entry in gallery.get("categories", []):
+        if entry.get("cover") == photo_id:
+            entry["cover"] = None
+            changed = True
+    if changed:
+        storage.save_gallery(owner, gallery)
 
 
 # ---------------------------------------------------------------- images
@@ -441,6 +501,7 @@ def public_view(owner, meta):
         "width": meta.get("width"),
         "height": meta.get("height"),
         "exif": meta.get("exif") or {},
+        "description": meta.get("description") or "",
         "urls": urls,
     }
 
@@ -459,6 +520,13 @@ def clean_name(raw):
     if any(ord(ch) < 32 for ch in name):
         raise UploadError(400, "The name contains characters we cannot store.")
     return name
+
+
+def clean_description(raw):
+    text = " ".join(str(raw or "").split())
+    if len(text) > 300:
+        raise UploadError(400, "The description is too long (300 characters maximum).")
+    return text or None
 
 
 def name_taken(owner, name):
@@ -497,21 +565,56 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"ok": True})
         if path == "/api/photos":
             return self.handle_photos()
+        if path == "/api/trash":
+            return self.handle_trash()
         if path.startswith("/media/"):
             return self.handle_media(path)
+        if path.startswith("/trash-media/"):
+            return self.handle_trash_media(path)
         return super().do_GET()
 
     def handle_photos(self):
         owner = current_owner()
+        gallery = gallery_for(owner)
         photos = [public_view(owner, meta) for meta in storage.list("public_photos", owner)]
         return self.send_json({
             "user": owner,
+            "firstName": gallery.get("firstName") or owner,
             "categories": [
                 {"id": c["id"], "label": c.get("label", c["id"]), "cover": c.get("cover")}
                 for c in categories_for(owner)
             ],
             "photos": photos,
         })
+
+    def handle_trash(self):
+        owner = current_owner()
+        items = []
+        for meta in storage.list_trash(owner, TRASH_HOURS):
+            view = public_view(owner, meta)
+            category = view["category"]
+            photo_id = view["id"]
+            thumb = (meta.get("files") or {}).get("thumb")
+            view["urls"] = {
+                "thumb": "/trash-media/%s/%s/%s/%s"
+                % (quote(owner), quote(category), quote(photo_id), quote(thumb))
+            } if thumb else {}
+            view["deleted_at"] = meta.get("deleted_at")
+            view["hours_left"] = meta.get("hours_left", 0)
+            items.append(view)
+        return self.send_json({"photos": items})
+
+    def send_file(self, target, cache):
+        content_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        size = target.stat().st_size
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(size))
+        self.send_header("Cache-Control", cache)
+        self._own_cache = True
+        self.end_headers()
+        with open(target, "rb") as source:
+            shutil.copyfileobj(source, self.wfile)
 
     def handle_media(self, path):
         parts = [unquote(p) for p in path.strip("/").split("/")]
@@ -526,17 +629,32 @@ class Handler(SimpleHTTPRequestHandler):
             return self.fail(404, "Not found")
         if not target.is_file():
             return self.fail(404, "Not found")
+        return self.send_file(target, "public, max-age=31536000, immutable")
 
-        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-        size = target.stat().st_size
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(size))
-        self.send_header("Cache-Control", "public, max-age=31536000, immutable")
-        self._own_cache = True
-        self.end_headers()
-        with open(target, "rb") as source:
-            shutil.copyfileobj(source, self.wfile)
+    def handle_trash_media(self, path):
+        """Thumbnails for the restore tray - the owner only, never a live photo."""
+        parts = [unquote(p) for p in path.strip("/").split("/")]
+        if len(parts) != 5 or parts[0] != "trash-media":
+            return self.fail(404, "Not found")
+        _, owner, category, photo_id, filename = parts
+        if owner != current_owner():
+            return self.fail(404, "Not found")
+        if not (
+            SAFE_ID.match(owner)
+            and SAFE_NAME.match(category)
+            and SAFE_ID.match(photo_id)
+            and SAFE_FILE.match(filename)
+        ):
+            return self.fail(404, "Not found")
+        if filename in ("photo.json", "deleted.json"):
+            return self.fail(404, "Not found")
+        try:
+            target = storage.file_path("Retention", owner, category, photo_id, filename)
+        except StorageError:
+            return self.fail(404, "Not found")
+        if not target.is_file():
+            return self.fail(404, "Not found")
+        return self.send_file(target, "private, max-age=60")
 
     # -- POST ----------------------------------------------------------
 
@@ -544,7 +662,101 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/upload":
             return self.handle_upload()
+        if path == "/api/delete":
+            return self.handle_delete()
+        if path == "/api/restore":
+            return self.handle_restore()
         return self.fail(404, "Not found")
+
+    def read_json_body(self, limit=1024 * 1024):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > limit:
+            return None
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+        except Exception:
+            return None
+
+    def handle_delete(self):
+        payload = self.read_json_body()
+        if not isinstance(payload, dict):
+            return self.fail(400, "Expected a JSON body.")
+
+        owner = current_owner()
+        category = str(payload.get("category") or "").strip()
+        if category not in {c["id"] for c in categories_for(owner)}:
+            return self.fail(400, "Choose a category.")
+        ids = payload.get("ids")
+        if not isinstance(ids, list) or not ids:
+            return self.fail(400, "Tick at least one photo.")
+        if len(ids) > 200:
+            return self.fail(400, "Too many photos in one go.")
+
+        deleted, failed = [], []
+        with upload_lock:
+            for raw_id in ids:
+                photo_id = str(raw_id)
+                if not SAFE_ID.match(photo_id):
+                    failed.append({"id": photo_id, "error": "Not found"})
+                    continue
+                try:
+                    storage.trash(owner, category, photo_id)
+                except Exception as error:
+                    print("  ! delete failed for %s: %s" % (photo_id, error))
+                    failed.append({"id": photo_id, "error": "Could not delete that photo."})
+                    continue
+                clear_cover(owner, photo_id)
+                deleted.append(photo_id)
+
+        return self.send_json({"deleted": deleted, "failed": failed})
+
+    def handle_restore(self):
+        payload = self.read_json_body()
+        if not isinstance(payload, dict):
+            return self.fail(400, "Expected a JSON body.")
+
+        owner = current_owner()
+        photo_id = str(payload.get("id") or "")
+        category = str(payload.get("category") or "").strip()
+        if category not in {c["id"] for c in categories_for(owner)}:
+            return self.fail(400, "Choose a category for this photo.")
+        if not SAFE_ID.match(photo_id):
+            return self.fail(404, "That photo is no longer in the deleted list.")
+
+        try:
+            name = clean_name(payload.get("name"))
+            description = clean_description(payload.get("description"))
+        except UploadError as error:
+            return self.fail(error.status, error.message)
+
+        with upload_lock:
+            entry = next(
+                (item for item in storage.list_trash(owner, TRASH_HOURS)
+                 if item.get("id") == photo_id),
+                None,
+            )
+            if not entry:
+                return self.fail(410, "That photo is no longer in the deleted list.")
+            if name_taken(owner, name):
+                return self.fail(409, "You already have a photo called \"%s\"." % name)
+
+            was_empty = not any(
+                photo.get("category") == category
+                for photo in storage.list("public_photos", owner)
+            )
+            try:
+                meta = storage.restore(
+                    owner, entry["category"], photo_id, category, name, description
+                )
+            except StorageError:
+                return self.fail(409, "That photo could not be restored.")
+            if was_empty:
+                set_cover(owner, category, photo_id)
+
+        return self.send_json({"photo": public_view(owner, meta)})
 
     def handle_upload(self):
         content_type = self.headers.get("Content-Type", "")
@@ -578,6 +790,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             owner = current_owner()
             name = clean_name(fields.get("name"))
+            description = clean_description(fields.get("description"))
             category = (fields.get("category") or "").strip()
             allowed_categories = {c["id"] for c in categories_for(owner)}
             if category not in allowed_categories:
@@ -624,6 +837,7 @@ class Handler(SimpleHTTPRequestHandler):
                 meta = {
                     "id": photo_id,
                     "name": name,
+                    "description": description,
                     "category": category,
                     "added": datetime.now().isoformat(timespec="seconds"),
                     "files": files_out,
@@ -653,8 +867,13 @@ def main():
     mimetypes.add_type("image/webp", ".webp")
     mimetypes.add_type("image/heic", ".heic")
 
-    for container in ("public_photos", "store_photos", "event_photos"):
+    for container in ("public_photos", "store_photos", "event_photos", "Retention"):
         (STORAGE_ROOT / container).mkdir(parents=True, exist_ok=True)
+
+    if TRASH_PURGE == "app":
+        removed = storage.purge_trash(TRASH_HOURS)
+        if removed:
+            print("  purged   %d expired retention folder(s)" % removed)
 
     handler = partial(Handler, directory=str(SITE))
     server = ThreadingHTTPServer((HOST, PORT), handler)

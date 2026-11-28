@@ -1,14 +1,82 @@
 ---
 environment: local
 machine: Windows (DESKTOP-661R4KD)
-last_session: 2026-11-27
-sessions: 2
+last_session: 2026-11-28
+sessions: 3
 ---
 
 # local_handover — Windows session diary
 
 Written only by the local (Windows) environment. Protocol: `ai_support.md` §0,
 rules 11–16. Entries newest first.
+
+## 2026-11-28 04:06 UTC — local — session 3
+
+### Session
+- Branch `main`, started at `0961c04`, 0 ahead / 0 behind `origin/main`; tree clean.
+- Goal: build delete → 48-hour retention → restore, plus the description field,
+  header location title, per-user data move, and a single launcher.
+
+### Start here
+- Everything works locally: run `serve.cmd` at the repo root, open
+  `http://localhost:8000`, then `My Gallery`.
+- Nothing is committed — all of this session is uncommitted on disk.
+- The four real photos are back in place; `Storage\Retention` is empty.
+
+### Changes
+- Per-user data moved: `Storage\public_photos\786\gallery.json`, created by the
+  server on first use; nothing per-user remains in `app_v1/main/data`.
+- Deleted: `app_v1/main/data/users_gallery.json`, `serve.ps1`.
+- `serve.cmd`: now standalone — checks/installs requirements, prints the URL,
+  opens the browser, runs `server.py`.
+- `app_v1/storage.py`: `trash`, `list_trash`, `restore`, `purge_trash`,
+  `gallery.json` read/write; `Retention` added to the container list; `delete`
+  kept for purge only.
+- `app_v1/server.py`: `/api/delete`, `/api/trash`, `/api/restore`, `/trash-media`;
+  48 h enforced at read time; cover cleared on delete; description accepted and
+  returned; gallery data served from storage.
+- `app_v1/main/js/app.js`: bin + tick boxes + Select all + Delete bar + confirm;
+  restore tray and pre-filled restore form; description field and lightbox line;
+  header location title.
+- `app_v1/main/css/site.css`: delete bar, selection, trash tray, description,
+  header title (hidden under 900 px), toasts.
+
+### Decisions
+- Retention folder name is `Retention`, not `_trash` → §2 SP-26 (revised).
+- Restore keeps the original id and rewrites the category → §2 SP-28 (revised).
+- Per-user data lives in storage, not the site folder → §2 SP-32.
+- One launcher only, `serve.cmd` → §2 SP-33.
+- Corrupt or missing `deleted.json` counts as expired — never offered.
+- Description is rendered as text, never HTML.
+
+### Verified end to end
+- Upload with description → delete → folder moved to `Retention`, cover cleared,
+  `/api/photos` and `/api/trash` both correct.
+- Trash thumbnail served; `photo.json` refused over `/trash-media`.
+- Restore into a different category under a new name, same id; cover set because
+  the category was empty.
+- Name clash on restore → 409 with the same message as upload.
+- Stamp moved back 49 h → `/api/trash` empty, restore → 410.
+- Purge removed the expired folder.
+- UI: bin only inside a category, bar pale → solid, confirm text, "1 deleted"
+  toast, bulk "2 deleted", empty Sky card disappeared, bin hidden in My Gallery.
+- Header title "My Gallery" / "Sky", hidden at 700 px.
+
+### Open / unverified
+- Phone/hotspot test still not run (`NA-24`).
+- Download name still lacks an extension (`NA-25`).
+- RAW upload still untested (`NA-22`).
+- `TRASH_PURGE=azure` path not written yet (only `app`).
+
+### Next steps
+1. Owner tests the five points and scores it out of 5.
+2. Fix the download filename (`NA-25`).
+3. Test from the phone (`NA-24`).
+
+### Git
+- Session start: `0961c04` on main, 0 ahead / 0 behind origin.
+- Work at close: 7 modified, 2 deleted — left uncommitted for the owner.
+- Commit/push: none by the AI.
 
 ## 2026-11-27 — local — session 2
 

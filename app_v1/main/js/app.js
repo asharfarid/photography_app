@@ -1,5 +1,5 @@
 /* weshoot - app_v1
-   Reads data/site.json and data/users_gallery.json and builds the page.
+   Reads data/site.json and the photo API and builds the page.
    CSS never touches the data; this file is the only one that does. */
 
 (async function () {
@@ -18,6 +18,24 @@
       throw new Error(path + " (" + response.status + " " + response.statusText + ")");
     }
     return response.json();
+  }
+
+  async function sendJson(path, payload) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    let body = {};
+    try {
+      body = await response.json();
+    } catch (error) {
+      body = {};
+    }
+    if (!response.ok) {
+      throw new Error(body.error || "Request failed (" + response.status + ")");
+    }
+    return body;
   }
 
   let site;
@@ -71,6 +89,18 @@
       }
       header.appendChild(nav);
     }
+
+    const where = document.createElement("span");
+    where.className = "site-where";
+    where.id = "site-where";
+    header.appendChild(where);
+  }
+
+  function setWhere(text) {
+    const where = document.getElementById("site-where");
+    if (where) {
+      where.textContent = text || "";
+    }
   }
 
   /* ---------- home page only ---------- */
@@ -123,9 +153,24 @@
   let photos = [];
   let activeCategory = null;
   let content = null;
+  let selecting = false;
+  const selected = new Set();
+
+  let binButton = null;
+  let deleteBar = null;
+  let deleteLabel = null;
+  let deleteButton = null;
+  let selectAllButton = null;
 
   function photosIn(categoryId) {
     return photos.filter((photo) => photo.category === categoryId);
+  }
+
+  function categoryLabel(categoryId) {
+    const category = (galleryUser.categories || []).find(
+      (item) => item.id === categoryId
+    );
+    return category ? category.label : categoryId;
   }
 
   function coverPhoto(category) {
@@ -160,6 +205,10 @@
       .join(" \u00b7 ");
   }
 
+  function plural(count, word) {
+    return count + " " + word + (count === 1 ? "" : "s");
+  }
+
   /* ---------- my gallery: toolbar ---------- */
 
   function buildGalleryToolbar(user) {
@@ -188,13 +237,23 @@
     const actions = document.createElement("div");
     actions.className = "gallery-actions";
 
+    binButton = document.createElement("button");
+    binButton.type = "button";
+    binButton.className = "gallery-action gallery-action-danger";
+    binButton.textContent = "\u{1F5D1}\uFE0F";
+    binButton.title = "Delete photos";
+    binButton.setAttribute("aria-label", "Delete photos");
+    binButton.hidden = true;
+    binButton.addEventListener("click", () => setSelecting(!selecting));
+    actions.appendChild(binButton);
+
     const add = document.createElement("button");
     add.type = "button";
     add.className = "gallery-action";
     add.textContent = "+";
     add.title = "Add photo";
     add.setAttribute("aria-label", "Add photo");
-    add.addEventListener("click", () => openUploadMenu(add));
+    add.addEventListener("click", () => openAddMenu(add));
     actions.appendChild(add);
 
     const settings = document.createElement("button");
@@ -207,9 +266,84 @@
 
     bar.appendChild(actions);
     main.appendChild(bar);
+
+    /* the delete bar sits below the toolbar, under the bin/+ pair */
+    deleteBar = document.createElement("div");
+    deleteBar.className = "delete-bar";
+    deleteBar.hidden = true;
+
+    selectAllButton = document.createElement("button");
+    selectAllButton.type = "button";
+    selectAllButton.className = "delete-select-all";
+    selectAllButton.textContent = "Select all";
+    selectAllButton.addEventListener("click", toggleSelectAll);
+    deleteBar.appendChild(selectAllButton);
+
+    deleteLabel = document.createElement("span");
+    deleteLabel.className = "delete-count";
+    deleteBar.appendChild(deleteLabel);
+
+    deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "delete-button";
+    deleteButton.textContent = "Delete";
+    deleteButton.disabled = true;
+    deleteButton.addEventListener("click", deleteSelected);
+    deleteBar.appendChild(deleteButton);
+
+    main.appendChild(deleteBar);
   }
 
-  /* ---------- my gallery: upload menu ---------- */
+  function setSelecting(on) {
+    selecting = on;
+    selected.clear();
+    updateDeleteBar();
+    render();
+  }
+
+  function toggleSelected(photoId) {
+    if (selected.has(photoId)) {
+      selected.delete(photoId);
+    } else {
+      selected.add(photoId);
+    }
+    updateDeleteBar();
+    render();
+  }
+
+  function toggleSelectAll() {
+    const list = photosIn(activeCategory);
+    if (selected.size === list.length && list.length > 0) {
+      selected.clear();
+    } else {
+      list.forEach((photo) => selected.add(photo.id));
+    }
+    updateDeleteBar();
+    render();
+  }
+
+  function updateDeleteBar() {
+    if (!deleteBar) {
+      return;
+    }
+    deleteBar.hidden = !selecting;
+    if (binButton) {
+      binButton.hidden = !activeCategory;
+      binButton.classList.toggle("is-active", selecting);
+    }
+    if (!selecting) {
+      return;
+    }
+    const total = photosIn(activeCategory).length;
+    const count = selected.size;
+    deleteLabel.textContent = count + " selected";
+    deleteButton.disabled = count === 0;
+    deleteButton.classList.toggle("armed", count > 0);
+    selectAllButton.textContent =
+      count > 0 && count === total ? "Clear all" : "Select all";
+  }
+
+  /* ---------- my gallery: add menu ---------- */
 
   function closeMenu() {
     const menu = document.querySelector(".action-menu");
@@ -221,7 +355,7 @@
       .forEach((element) => element.classList.remove("menu-open"));
   }
 
-  function openUploadMenu(button) {
+  function openAddMenu(button) {
     if (document.querySelector(".action-menu")) {
       closeMenu();
       return;
@@ -231,15 +365,25 @@
     const menu = document.createElement("div");
     menu.className = "action-menu";
 
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "action-menu-item";
-    item.textContent = "Upload Photo";
-    item.addEventListener("click", () => {
+    const upload = document.createElement("button");
+    upload.type = "button";
+    upload.className = "action-menu-item";
+    upload.textContent = "Upload from device";
+    upload.addEventListener("click", () => {
       closeMenu();
-      openWizard();
+      openWizard({ mode: "upload" });
     });
-    menu.appendChild(item);
+    menu.appendChild(upload);
+
+    const restore = document.createElement("button");
+    restore.type = "button";
+    restore.className = "action-menu-item";
+    restore.textContent = "Restore deleted photos";
+    restore.addEventListener("click", () => {
+      closeMenu();
+      openTrash();
+    });
+    menu.appendChild(restore);
 
     button.parentElement.classList.add("menu-open");
     button.parentElement.appendChild(menu);
@@ -261,6 +405,8 @@
       return;
     }
     content.textContent = "";
+    setWhere(activeCategory ? categoryLabel(activeCategory) : "My Gallery");
+    updateDeleteBar();
     if (activeCategory) {
       renderCategory(activeCategory);
     } else {
@@ -330,6 +476,8 @@
 
     card.addEventListener("click", () => {
       activeCategory = category.id;
+      selecting = false;
+      selected.clear();
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -338,9 +486,6 @@
   }
 
   function renderCategory(categoryId) {
-    const category = (galleryUser.categories || []).find(
-      (item) => item.id === categoryId
-    );
     const list = photosIn(categoryId);
 
     const head = document.createElement("div");
@@ -352,17 +497,19 @@
     back.textContent = "\u2190 All categories";
     back.addEventListener("click", () => {
       activeCategory = null;
+      selecting = false;
+      selected.clear();
       render();
     });
     head.appendChild(back);
 
     const title = document.createElement("h2");
-    title.textContent = category ? category.label : categoryId;
+    title.textContent = categoryLabel(categoryId);
     head.appendChild(title);
 
     const tally = document.createElement("span");
     tally.className = "muted";
-    tally.textContent = list.length + (list.length === 1 ? " photo" : " photos");
+    tally.textContent = plural(list.length, "photo");
     head.appendChild(tally);
 
     content.appendChild(head);
@@ -401,12 +548,30 @@
       caption.textContent = photo.name;
       tile.appendChild(caption);
 
-      tile.addEventListener("click", () => openLightbox(photo));
+      if (selecting) {
+        tile.classList.add("selectable");
+        const checked = selected.has(photo.id);
+        if (checked) {
+          tile.classList.add("selected");
+        }
+        const box = document.createElement("span");
+        box.className = "photo-check";
+        box.setAttribute("aria-hidden", "true");
+        box.textContent = checked ? "\u2713" : "";
+        tile.appendChild(box);
+        tile.setAttribute("aria-pressed", checked ? "true" : "false");
+        tile.addEventListener("click", () => toggleSelected(photo.id));
+      } else {
+        tile.addEventListener("click", () => openLightbox(photo));
+      }
+
       grid.appendChild(tile);
     }
 
     content.appendChild(grid);
   }
+
+  /* ---------- my gallery: lightbox ---------- */
 
   function openLightbox(photo) {
     const urls = photo.urls || {};
@@ -434,6 +599,13 @@
       line.className = "lightbox-exif";
       line.textContent = details;
       caption.appendChild(line);
+    }
+
+    if (photo.description) {
+      const note = document.createElement("p");
+      note.className = "lightbox-description";
+      note.textContent = photo.description;
+      caption.appendChild(note);
     }
 
     if (urls.original) {
@@ -479,7 +651,254 @@
     document.addEventListener("keydown", onKey);
   }
 
-  /* ---------- my gallery: upload wizard ---------- */
+  /* ---------- my gallery: small dialogs ---------- */
+
+  function toast(message, isError) {
+    const note = document.createElement("p");
+    note.className = "toast" + (isError ? " error" : "");
+    note.textContent = message;
+    document.body.appendChild(note);
+    window.setTimeout(() => note.remove(), 4500);
+  }
+
+  function confirmDialog(title, note) {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement("div");
+      backdrop.className = "modal-backdrop";
+
+      const modal = document.createElement("div");
+      modal.className = "modal confirm";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+
+      const heading = document.createElement("h2");
+      heading.textContent = title;
+      modal.appendChild(heading);
+
+      const text = document.createElement("p");
+      text.className = "modal-note";
+      text.textContent = note;
+      modal.appendChild(text);
+
+      const actions = document.createElement("div");
+      actions.className = "wizard-actions";
+
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "btn-ghost";
+      cancel.textContent = "Cancel";
+
+      const confirm = document.createElement("button");
+      confirm.type = "button";
+      confirm.className = "btn-danger";
+      confirm.textContent = "Delete";
+
+      actions.appendChild(cancel);
+      actions.appendChild(confirm);
+      modal.appendChild(actions);
+
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+      document.body.classList.add("no-scroll");
+      confirm.focus();
+
+      function finish(answer) {
+        backdrop.remove();
+        document.body.classList.remove("no-scroll");
+        document.removeEventListener("keydown", onKey);
+        resolve(answer);
+      }
+
+      function onKey(event) {
+        if (event.key === "Escape") {
+          finish(false);
+        }
+      }
+
+      document.addEventListener("keydown", onKey);
+      cancel.addEventListener("click", () => finish(false));
+      confirm.addEventListener("click", () => finish(true));
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) {
+          finish(false);
+        }
+      });
+    });
+  }
+
+  async function deleteSelected() {
+    if (!activeCategory || selected.size === 0) {
+      return;
+    }
+    const ids = Array.from(selected);
+    const confirmed = await confirmDialog(
+      "Delete " + plural(ids.length, "photo") + "?",
+      "They move to Retention for 48 hours. You can bring them back from + \u2192 Restore deleted photos."
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteButton.disabled = true;
+    deleteLabel.textContent = "Deleting\u2026";
+
+    try {
+      const result = await sendJson("api/delete", {
+        category: activeCategory,
+        ids,
+      });
+      const done = (result.deleted || []).length;
+      const failed = (result.failed || []).length;
+
+      selecting = false;
+      selected.clear();
+      await refreshPhotos();
+
+      toast(
+        done + " deleted" + (failed ? " \u00b7 " + failed + " failed" : ""),
+        failed > 0
+      );
+    } catch (error) {
+      toast(error.message, true);
+      deleteButton.disabled = false;
+      updateDeleteBar();
+    }
+  }
+
+  async function refreshPhotos() {
+    const data = await loadJson("api/photos");
+    photos = Array.isArray(data.photos) ? data.photos : [];
+    galleryUser.categories = Array.isArray(data.categories) ? data.categories : [];
+    if (activeCategory && photosIn(activeCategory).length === 0) {
+      activeCategory = null;
+    }
+    render();
+  }
+
+  /* ---------- my gallery: trash tray ---------- */
+
+  async function openTrash() {
+    let items = [];
+    try {
+      const data = await loadJson("api/trash");
+      items = Array.isArray(data.photos) ? data.photos : [];
+    } catch (error) {
+      toast(error.message, true);
+      return;
+    }
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+
+    const modal = document.createElement("div");
+    modal.className = "modal trash-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Deleted photos";
+    modal.appendChild(heading);
+
+    const note = document.createElement("p");
+    note.className = "modal-note";
+    note.textContent =
+      "Kept for 48 hours. Restoring puts the photo back in your gallery.";
+    modal.appendChild(note);
+
+    if (items.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty-hint";
+      empty.textContent = "Nothing deleted in the last 48 hours.";
+      modal.appendChild(empty);
+    } else {
+      const list = document.createElement("div");
+      list.className = "trash-list";
+
+      for (const item of items) {
+        const row = document.createElement("div");
+        row.className = "trash-row";
+
+        const thumb = document.createElement("span");
+        thumb.className = "trash-thumb";
+        if (item.urls && item.urls.thumb) {
+          const image = document.createElement("img");
+          image.src = imageUrl(item.urls.thumb);
+          image.alt = "";
+          image.loading = "lazy";
+          thumb.appendChild(image);
+        }
+        row.appendChild(thumb);
+
+        const meta = document.createElement("span");
+        meta.className = "trash-meta";
+
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+        meta.appendChild(name);
+
+        const line = document.createElement("span");
+        line.className = "trash-line";
+        line.textContent =
+          categoryLabel(item.category) +
+          " \u00b7 " +
+          plural(item.hours_left, "hour") +
+          " left";
+        meta.appendChild(line);
+
+        row.appendChild(meta);
+
+        const restore = document.createElement("button");
+        restore.type = "button";
+        restore.className = "btn-primary";
+        restore.textContent = "Restore";
+        restore.addEventListener("click", () => {
+          close();
+          openWizard({ mode: "restore", photo: item });
+        });
+        row.appendChild(restore);
+
+        list.appendChild(row);
+      }
+
+      modal.appendChild(list);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "wizard-actions";
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "btn-ghost";
+    closeButton.textContent = "Close";
+    closeButton.addEventListener("click", close);
+    actions.appendChild(closeButton);
+
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    document.body.classList.add("no-scroll");
+
+    function close() {
+      backdrop.remove();
+      document.body.classList.remove("no-scroll");
+      document.removeEventListener("keydown", onKey);
+    }
+
+    function onKey(event) {
+      if (event.key === "Escape") {
+        close();
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) {
+        close();
+      }
+    });
+  }
+
+  /* ---------- my gallery: upload / restore form ---------- */
 
   function field(labelText, control) {
     const label = document.createElement("label");
@@ -493,7 +912,7 @@
     return label;
   }
 
-  function uploadPhoto(file, name, category, onProgress) {
+  function uploadPhoto(file, name, category, description, onProgress) {
     return new Promise((resolve, reject) => {
       const request = new XMLHttpRequest();
       request.open("POST", "api/upload");
@@ -526,11 +945,16 @@
       form.append("file", file);
       form.append("name", name);
       form.append("category", category);
+      form.append("description", description || "");
       request.send(form);
     });
   }
 
-  function openWizard() {
+  function openWizard(options) {
+    const settings = options || {};
+    const restoring = settings.mode === "restore";
+    const source = settings.photo || null;
+
     const backdrop = document.createElement("div");
     backdrop.className = "modal-backdrop";
 
@@ -542,34 +966,53 @@
 
     const title = document.createElement("h2");
     title.id = "upload-title";
-    title.textContent = "Upload Photo";
+    title.textContent = restoring ? "Restore Photo" : "Upload Photo";
     modal.appendChild(title);
 
     const note = document.createElement("p");
     note.className = "modal-note";
-    note.textContent =
-      "One photo at a time. JPEG, PNG, WebP, HEIC, TIFF or RAW. Up to 500 MB.";
+    note.textContent = restoring
+      ? "This photo is in Retention. Choose its name, category and description."
+      : "One photo at a time. JPEG, PNG, WebP, HEIC, TIFF or RAW. Up to 500 MB.";
     modal.appendChild(note);
 
     const form = document.createElement("form");
     form.noValidate = true;
 
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept =
-      "image/*,.cr2,.cr3,.nef,.nrw,.arw,.dng,.raf,.rw2,.orf,.pef,.srw,.tif,.tiff";
-    form.appendChild(field("Photo", fileInput));
+    let fileInput = null;
+    let preview = null;
 
-    const preview = document.createElement("div");
-    preview.className = "upload-preview";
-    preview.hidden = true;
-    form.appendChild(preview);
+    if (restoring) {
+      preview = document.createElement("div");
+      preview.className = "upload-preview";
+      if (source && source.urls && source.urls.thumb) {
+        const image = document.createElement("img");
+        image.src = imageUrl(source.urls.thumb);
+        image.alt = "";
+        preview.appendChild(image);
+      }
+      form.appendChild(preview);
+    } else {
+      fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept =
+        "image/*,.cr2,.cr3,.nef,.nrw,.arw,.dng,.raf,.rw2,.orf,.pef,.srw,.tif,.tiff";
+      form.appendChild(field("Photo", fileInput));
+
+      preview = document.createElement("div");
+      preview.className = "upload-preview";
+      preview.hidden = true;
+      form.appendChild(preview);
+    }
 
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.maxLength = 80;
     nameInput.autocomplete = "off";
     nameInput.placeholder = "Give this photo a name";
+    if (restoring && source) {
+      nameInput.value = source.name || "";
+    }
     form.appendChild(field("Name", nameInput));
 
     const categorySelect = document.createElement("select");
@@ -579,10 +1022,21 @@
       option.textContent = category.label;
       categorySelect.appendChild(option);
     }
-    if (activeCategory) {
+    if (restoring && source && source.category) {
+      categorySelect.value = source.category;
+    } else if (activeCategory) {
       categorySelect.value = activeCategory;
     }
     form.appendChild(field("Category", categorySelect));
+
+    const descriptionInput = document.createElement("textarea");
+    descriptionInput.rows = 3;
+    descriptionInput.maxLength = 300;
+    descriptionInput.placeholder = "Optional - what should people know about this photo?";
+    if (restoring && source) {
+      descriptionInput.value = source.description || "";
+    }
+    form.appendChild(field("Description (optional)", descriptionInput));
 
     const message = document.createElement("p");
     message.className = "wizard-message";
@@ -607,7 +1061,7 @@
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.className = "btn-primary";
-    submit.textContent = "Upload";
+    submit.textContent = restoring ? "Restore" : "Upload";
 
     actions.appendChild(cancel);
     actions.appendChild(submit);
@@ -645,51 +1099,53 @@
       }
     });
 
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files && fileInput.files[0];
-      preview.textContent = "";
-      preview.hidden = true;
-      if (!file) {
-        return;
-      }
-
-      if (!nameInput.value.trim()) {
-        nameInput.value = file.name
-          .replace(/\.[^.]+$/, "")
-          .replace(/[_-]+/g, " ")
-          .trim();
-      }
-
-      const isRaw = /\.(cr2|cr3|nef|nrw|arw|srf|sr2|dng|raf|rw2|orf|pef|srw|raw|3fr|fff)$/i.test(
-        file.name
-      );
-      const isHeic = /\.(heic|heif)$/i.test(file.name);
-
-      if (isRaw || isHeic) {
-        const line = document.createElement("span");
-        line.className = "preview-note";
-        line.textContent =
-          file.name +
-          " \u00b7 " +
-          formatBytes(file.size) +
-          " \u00b7 preview appears after upload";
-        preview.appendChild(line);
-        preview.hidden = false;
-        return;
-      }
-
-      const url = URL.createObjectURL(file);
-      const image = document.createElement("img");
-      image.src = url;
-      image.alt = "";
-      image.onload = () => URL.revokeObjectURL(url);
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
+    if (fileInput) {
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        preview.textContent = "";
         preview.hidden = true;
-      };
-      preview.appendChild(image);
-      preview.hidden = false;
-    });
+        if (!file) {
+          return;
+        }
+
+        if (!nameInput.value.trim()) {
+          nameInput.value = file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/[_-]+/g, " ")
+            .trim();
+        }
+
+        const isRaw = /\.(cr2|cr3|nef|nrw|arw|srf|sr2|dng|raf|rw2|orf|pef|srw|raw|3fr|fff)$/i.test(
+          file.name
+        );
+        const isHeic = /\.(heic|heif)$/i.test(file.name);
+
+        if (isRaw || isHeic) {
+          const line = document.createElement("span");
+          line.className = "preview-note";
+          line.textContent =
+            file.name +
+            " \u00b7 " +
+            formatBytes(file.size) +
+            " \u00b7 preview appears after upload";
+          preview.appendChild(line);
+          preview.hidden = false;
+          return;
+        }
+
+        const url = URL.createObjectURL(file);
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = "";
+        image.onload = () => URL.revokeObjectURL(url);
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          preview.hidden = true;
+        };
+        preview.appendChild(image);
+        preview.hidden = false;
+      });
+    }
 
     nameInput.addEventListener("input", () => {
       if (nameInput.value.trim()) {
@@ -699,12 +1155,6 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) {
-        showMessage("Choose a photo first.");
-        return;
-      }
 
       const name = nameInput.value.trim();
       if (!name) {
@@ -720,25 +1170,44 @@
         return;
       }
 
+      const file = fileInput ? fileInput.files && fileInput.files[0] : null;
+      if (!restoring && !file) {
+        showMessage("Choose a photo first.");
+        return;
+      }
+
       cancel.disabled = true;
       submit.disabled = true;
-      progress.hidden = false;
-      showMessage("Uploading\u2026", "working");
+      progress.hidden = restoring;
+      showMessage(restoring ? "Restoring\u2026" : "Uploading\u2026", "working");
 
       try {
-        const photo = await uploadPhoto(
-          file,
-          name,
-          categorySelect.value,
-          (fraction) => {
-            progress.value = Math.round(fraction * 100);
-          }
-        );
+        let photo;
+        if (restoring) {
+          const body = await sendJson("api/restore", {
+            id: source.id,
+            name,
+            category: categorySelect.value,
+            description: descriptionInput.value,
+          });
+          photo = body.photo;
+        } else {
+          photo = await uploadPhoto(
+            file,
+            name,
+            categorySelect.value,
+            descriptionInput.value,
+            (fraction) => {
+              progress.value = Math.round(fraction * 100);
+            }
+          );
+        }
 
-        photos.push(photo);
         activeCategory = photo.category;
+        selecting = false;
+        selected.clear();
         closeModal();
-        render();
+        await refreshPhotos();
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (error) {
         cancel.disabled = false;
@@ -752,36 +1221,21 @@
   /* ---------- my gallery: boot ---------- */
 
   async function buildMyGallery() {
-    let gallery;
-    try {
-      gallery = await loadJson("data/users_gallery.json");
-    } catch (error) {
-      console.error(error);
-      fail(
-        "Could not load data/users_gallery.json (" +
-          error.message +
-          "). Start the site with serve.cmd, then open http://localhost:8000"
-      );
-      return;
-    }
-
-    galleryUser = gallery.users && gallery.users[getCurrentUser()];
-    if (!galleryUser) {
-      fail("No gallery data for user " + getCurrentUser() + ".");
-      return;
-    }
-
     try {
       const data = await loadJson("api/photos");
+      galleryUser = {
+        firstName: data.firstName || data.user || "",
+        categories: Array.isArray(data.categories) ? data.categories : [],
+      };
       photos = Array.isArray(data.photos) ? data.photos : [];
     } catch (error) {
       console.error(error);
-      photos = [];
       fail(
-        "Could not load your photos (" +
+        "Could not load your gallery (" +
           error.message +
           "). Start the site with serve.cmd, then open http://localhost:8000"
       );
+      return;
     }
 
     buildGalleryToolbar(galleryUser);

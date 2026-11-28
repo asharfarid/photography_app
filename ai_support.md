@@ -4,7 +4,7 @@ file: ai_support.md
 purpose: Persistent memory + decision log for AI assistant sessions
 schema_version: 2
 written_by: AI assistant (sole writer)
-last_updated: 2026-11-27
+last_updated: 2026-11-28
 repo_root: C:\Stagging\AZ104_free_sub_project\Photography_app
 ---
 
@@ -118,7 +118,7 @@ machines compare cleanly; a second run on the same day is a new entry).
 | Working dir | `C:\Stagging\AZ104_free_sub_project\Photography_app` (Windows, pwsh, git 2.54) |
 | App root | `app_v1\main` = the whole site (HTML/CSS/JS/JSON/artwork) |
 | Storage mirror | `C:\Stagging\AZ104_free_sub_project\Storage` — **outside the repo, outside every app version** (SP-15). Empty today; 3 containers agreed |
-| Local run | `serve.ps1` (or `serve.cmd`) at the repo root → `http://localhost:8000`, runs `app_v1\server.py` — read **and upload** (`/api/upload`, `/api/photos`, `/media`) |
+| Local run | `serve.cmd` at the repo root → `http://localhost:8000`, installs requirements once and runs `app_v1\server.py` — read, upload, delete, restore (`/api/upload`, `/api/photos`, `/api/delete`, `/api/trash`, `/api/restore`, `/media`, `/trash-media`) |
 
 Non-goals near term: custom domain, microservices, native mobile app, payments,
 SEO/marketing, multi-region.
@@ -142,7 +142,7 @@ SEO/marketing, multi-region.
 | SP-11 | **Plain language only**; define any unavoidable term in one line | ACTIVE | 2026-11-19 |
 | SP-12 | **Least monthly cost is the standing rule.** No fixed ceiling; every service's cost is reviewed before finalizing | ACTIVE | 2026-11-22 |
 | SP-13 | **Stage 1 front end is hand-written HTML/CSS/JS.** No React/Next.js in Stage 1; revisit only if Stage 2 needs it | ACTIVE | 2026-11-23 |
-| SP-14 | **App data files are `.json`.** They need a local web server (`file://` blocks reads); `serve.ps1`/`serve.cmd` on port 8000 | ACTIVE | 2026-11-23 |
+| SP-14 | **App data files are `.json`.** They need a local web server (`file://` blocks reads); `serve.cmd` on port 8000 | ACTIVE | 2026-11-23 |
 | SP-15 | **The storage mirror lives outside the repo and outside every app version** — `C:\Stagging\AZ104_free_sub_project\Storage` (renamed from `storage_account` 2026-11-25) | ACTIVE | 2026-11-24 |
 | SP-16 | **Single-user mode.** One value, `currentUser` in `site.json`, answers "who am I?" for every page through `getCurrentUser()`. No password, no fake login screen. When real login arrives, only that function changes | ACTIVE | 2026-11-25 |
 | SP-17 | **Containers are by purpose, not by person**: `public_photos`, `store_photos`, `event_photos`. A user is a **folder** named by their numeric ID (`786`); a new user needs no provisioning | ACTIVE | 2026-11-25 |
@@ -153,13 +153,15 @@ SEO/marketing, multi-region.
 | SP-22 | **GPS is stripped from all three copies**; camera settings (aperture, shutter, ISO, lens, focal) are copied into `photo.json` for display. JPEG originals are stripped losslessly; other originals keep their metadata for now (`NA-19`) | ACTIVE | 2026-11-27 |
 | SP-23 | **Upload limits:** 500 MB, ~200 MP, formats **JPEG/PNG/WebP/HEIC/TIFF/RAW**. PDF and SVG are rejected. Validation reads the file's bytes, never the extension | ACTIVE | 2026-11-27 |
 | SP-24 | **The server resolves the owner**; a client-sent id is ignored. Ids and paths are pattern-checked and confined to the storage root. `store_photos` is readable only by its owner once auth exists | ACTIVE | 2026-11-27 |
-| SP-25 | **`app_v1` is the deployable root:** `server.py`, `storage.py`, `requirements.txt`, `main\`. `HOST`/`PORT`/`STORAGE_ROOT` come from the environment; `serve.cmd`/`serve.ps1` sit **one level above** (repo root) and never deploy | ACTIVE | 2026-11-27 |
-| SP-26 | **Deleted photos go to a private trash for 48 hours.** The folder moves to `_trash\<owner>\<category>\<id>\` with a `deleted.json` holding `deleted_at` (UTC). The 48-hour rule is enforced **by that timestamp at read time**, not by a scheduled job: at 48 h the photo is gone to the app, exact to the second. Removing the bytes is housekeeping (`purge_trash`), selected by `TRASH_PURGE=app\|azure`; in Azure a lifecycle rule on `_trash/` may do it. Trash is invisible in counts, cards, search, cover and `/media` | ACTIVE | 2026-11-27 |
+| SP-25 | **`app_v1` is the deployable root:** `server.py`, `storage.py`, `requirements.txt`, `main\`. `HOST`/`PORT`/`STORAGE_ROOT` come from the environment; `serve.cmd` sits **one level above** (repo root) and never deploys | ACTIVE (revised 2026-11-28) | 2026-11-27 |
+| SP-26 | **Deleted photos go to a private retention area for 48 hours.** The folder moves to `Retention\<owner>\<category>\<id>\` with a `deleted.json` holding `deleted_at` (UTC); the category stays in the path so the folder survives a corrupt `photo.json`. The 48-hour rule is enforced **by that timestamp at read time**, not by a scheduled job: at 48 h the photo is gone to the app, exact to the second. Removing the bytes is housekeeping (`purge_trash`), selected by `TRASH_PURGE=app\|azure`; in Azure a lifecycle rule on `Retention/` may do it. Retention is invisible in counts, cards, search, cover and `/media` | ACTIVE (revised 2026-11-28) | 2026-11-27 |
 | SP-27 | **Delete UI lives only inside a category** — never on My Gallery; categories are not deletable. Tick boxes + Select all; a pale-red **Delete** button sits below the toolbar under the bin/`+` pair and turns solid red once ≥1 photo is ticked; confirming shows a popup with the count and the 48-hour disclaimer; the result reads "3 deleted / 1 failed", and a failed photo stays in the grid to retry | ACTIVE | 2026-11-27 |
-| SP-28 | **Restore is the second item in the `+` menu** ("Upload from device" / "Restore deleted photos"). The tray lists deleted photos newest first with thumbnail, name and hours left. Restoring opens the **upload form pre-filled** (name, description, category all editable); a taken name shows the same inline error as a fresh upload; the photo returns to the chosen category and becomes its cover if that category was empty | ACTIVE | 2026-11-27 |
+| SP-28 | **Restore is the second item in the `+` menu** ("Upload from device" / "Restore deleted photos"). The tray lists deleted photos newest first with thumbnail, name and hours left. Restoring opens the **upload form pre-filled** (name, description, category all editable); a taken name shows the same inline error as a fresh upload; the photo returns to the chosen category and becomes its cover if that category was empty. The **original id is kept**, and the chosen category is written back into `photo.json` | ACTIVE (revised 2026-11-28) | 2026-11-27 |
 | SP-29 | **Upload has an optional Description** — max 300 characters, stored in `photo.json`, shown under the camera details in the lightbox | ACTIVE | 2026-11-27 |
 | SP-30 | **A cover is never empty while photos exist:** deleting the cover auto-reassigns to another photo; an empty category card disappears (already the render rule). The manual cover picker stays deferred (`NA-21`) | ACTIVE | 2026-11-27 |
 | SP-31 | **The site header shows where you are**, as non-clickable text in the centre: "My Gallery", or the category label ("Landscape"). It is hidden on narrow phones if it cannot fit; the site name stays left and the nav right | ACTIVE | 2026-11-27 |
+| SP-32 | **Per-user data lives in storage, not in the site folder.** `Storage\public_photos\<owner>\gallery.json` holds `firstName`, `categories` and `cover`; the browser gets it from `/api/photos`, never as a static file. `main\data\site.json` keeps site-wide settings only | ACTIVE | 2026-11-28 |
+| SP-33 | **One launcher: `serve.cmd` at the repo root.** It installs requirements once, opens the browser and starts `server.py` itself; `serve.ps1` is deleted. No launcher file is ever deployed | ACTIVE | 2026-11-28 |
 
 Derived constraints (consequences, not new decisions):
 
@@ -223,7 +225,7 @@ Old flat IDs `OD-1…OD-17` were folded into these groups on 2026-11-22.
 
 ## 4. Architecture (app + separate storage, merged stages)
 
-**One app, one storage account, three purpose containers (SP-17).**
+**One app, one storage account, three purpose containers (SP-17) plus retention.**
 
 ```
 Visitor --HTTPS--> App (single app; host TBD via `OD-H`)
@@ -233,9 +235,13 @@ Visitor --HTTPS--> App (single app; host TBD via `OD-H`)
                   |-- public_photos\    every user's public photos
                   |-- store_photos\     masters offered for sale
                   |-- event_photos\     contest entries (Stage 3)
+                  |-- Retention\        deleted photos, 48 hours (SP-26)
                         \786\landscape\sunrise.webp
                          ^ user id = folder, never a container
 ```
+
+Each user folder also holds `gallery.json` (firstName, categories, covers — SP-32);
+each photo folder holds `photo.json` and the three copies.
 
 **Dev layout:** `Photography_app\app_v1\main` (the repo) and `..\Storage` (outside
 the repo) sit side by side on disk, mirroring the Azure split — site in one place,
@@ -257,10 +263,11 @@ Design rules:
   Cards and grids load `thumb`; an opened photo loads `display`; `original` only
   on Download. `photo.json` also carries the camera settings, so no page ever
   reads EXIF from an image.
-- **Deleting moves the photo folder to `_trash\<owner>\<category>\<id>\`** with a
+- **Deleting moves the photo folder to `Retention\<owner>\<category>\<id>\`** with a
   `deleted.json` (`deleted_at`, UTC). The app hides anything older than 48 hours
   the moment it reads; a purge function only reclaims disk (SP-26). Restoring
-  moves the folder back into the chosen category (SP-28).
+  moves the folder back into the chosen category, keeps the id, and rewrites the
+  category in `photo.json` (SP-28).
 - The photo list **is the folder listing**, not a stored array. A folder without
   `photo.json` is an unfinished upload and is never shown.
 - Site artwork (backgrounds) lives in the app (`app_v1\main\artwork`), not in
@@ -356,9 +363,11 @@ diff proves drift is caught; keep a written list of non-exportable resources.
 C:\Stagging\AZ104_free_sub_project\
 ├── Storage\                      mirror of the blob account — OUTSIDE the repo (SP-15)
 │   ├── public_photos\                every user's public photos; user id = folder
+│   │                                 (each user folder has gallery.json — SP-32)
 │   ├── store_photos\                 masters offered for sale
-│   └── event_photos\                 contest entries (Stage 3)
-│       (all three created 2026-11-27; empty after test cleanup)
+│   ├── event_photos\                 contest entries (Stage 3)
+│   └── Retention\                    deleted photos for 48 hours (SP-26)
+│       (created at server start)
 └── Photography_app\              THE REPO
     ├── .git\  .gitignore
     ├── ai_support.md             this file — project memory + decision log
@@ -366,8 +375,7 @@ C:\Stagging\AZ104_free_sub_project\
     ├── local_handover.md         Windows session diary (local writes it)
     ├── temp.txt                  project brief (ignored)
     ├── Master_landing_zone_v1\   reserved for ARM (empty; on hold)
-    ├── serve.cmd                 double-click launcher (local only)
-    ├── serve.ps1                 local launcher (never deployed)
+    ├── serve.cmd                 the one launcher (local only, never deployed)
     ├── app_v1\                   THE DEPLOYABLE ROOT (SP-25)
     │   ├── ideas.md              idea parking lot for THIS version (resets per version)
     │   ├── server.py             static site + upload API + image copies
@@ -381,10 +389,8 @@ C:\Stagging\AZ104_free_sub_project\
     │       ├── events.html       ┘
     │       ├── css\site.css      header, hero, 2×2 overlay buttons, messages
     │       ├── js\app.js         reads site.json → header, hero, buttons
-    │       ├── data\site.json    siteName, siteNameHref, currentUser, imageBase,
+    │       ├── data\site.json    site-wide: siteName, currentUser, imageBase,
     │       │                     titleBarImage, heroImage, heroText[], nav[], buttons[]
-    │       ├── data\users_gallery.json   per-user firstName + categories
-    │       │                     (label + cover); photo lists come from storage
     │       └── artwork\          site artwork only (real WebP, not photos)
     ├── labs\                     (planned) 01-storage-static · 02-app-service-f1 ·
     │                             03-functions-api · 04-vm-3tier (SP-5) · 05-static-web-apps
@@ -534,9 +540,10 @@ Git conventions:
 - [x] **NA-18** ~~Wire the `+` button~~ — done 2026-11-27; `⚙` still inert
 - [ ] **NA-19** Strip GPS from non-JPEG originals (HEIC/TIFF/WebP); RAW cannot
       be edited in place
-- [ ] **NA-20** Rename UI — delete half moved to `NA-26`; a deleted cover must be
-      reassigned (`SP-30`)
-- [ ] **NA-21** Cover picker behind `⚙`; preferences stay in app data until `OD-R`
+- [ ] **NA-20** Rename UI — delete half done 2026-11-28; cover reassignment done
+      (`SP-30`), only the rename itself remains
+- [ ] **NA-21** Cover picker behind `⚙`; preferences now live in
+      `Storage\public_photos\<owner>\gallery.json` (`SP-32`)
 - [ ] **NA-22** Upload a real RAW file and confirm the preview path
 - [ ] **NA-23** Admin console: per-user counts **computed from storage**, never stored
 - [ ] **NA-24** Test from a phone over the laptop hotspot: `HOST=0.0.0.0` plus a
@@ -544,21 +551,24 @@ Git conventions:
 - [ ] **NA-25** Download name: `sanitise(photo.name) + extension from
       photo.urls.original`, so Windows gets `Sunrise Test.jpg` instead of a name
       with no extension (and no invalid characters)
-- [ ] **NA-26** Build the delete UI (`SP-27`): bin left of `+` inside a category
-      only, tick boxes + Select all, pale→solid red Delete bar, confirm popup with
-      the 48-hour disclaimer, "3 deleted / 1 failed" result
-- [ ] **NA-27** Build the trash (`SP-26`): `_trash\<owner>\<category>\<id>\` +
-      `deleted.json`, hide at 48 h by `deleted_at` (UTC), `purge_trash`, and the
-      `TRASH_PURGE=app|azure` switch; keep trash out of counts/search/`/media`
-- [ ] **NA-28** Build restore (`SP-28`): second `+` item, tray newest first with
-      thumbnail/name/hours left, prefilled form, name-clash error, category change
-- [ ] **NA-29** Add the optional description (`SP-29`): 300 chars, `photo.json`,
-      shown under camera details in the lightbox
-- [ ] **NA-30** Header location trail (`SP-31`): centre text, non-clickable,
-      "My Gallery" / category label, hidden when it cannot fit
-- [ ] **NA-31** Verify delete/restore (`SP-26`…`SP-30`): cover reassign, empty
-      card disappears, name freed then reused, partial failure, exact 48-hour
-      boundary, phone layout
+- [x] **NA-26** ~~Build the delete UI (`SP-27`)~~ — done 2026-11-28: bin inside a
+      category only, tick boxes + Select all, pale→solid red Delete bar, confirm
+      popup with the 48-hour disclaimer, "N deleted · M failed" toast
+- [x] **NA-27** ~~Build the retention area (`SP-26`)~~ — done 2026-11-28:
+      `Retention\<owner>\<category>\<id>\` + `deleted.json`, hidden at 48 h by
+      `deleted_at` (UTC), `purge_trash`, `TRASH_PURGE=app|azure`
+- [x] **NA-28** ~~Build restore (`SP-28`)~~ — done 2026-11-28: second `+` item,
+      tray newest first with thumbnail/name/hours left, pre-filled form, name-clash
+      error, category change, id kept
+- [x] **NA-29** ~~Add the optional description (`SP-29`)~~ — done 2026-11-28:
+      300 chars, `photo.json`, shown as text under the camera details
+- [x] **NA-30** ~~Header location trail (`SP-31`)~~ — done 2026-11-28: centre
+      text, non-clickable, "My Gallery" / category label, hidden under 900 px
+- [x] **NA-31** ~~Verify delete/restore~~ — done 2026-11-28: cover cleared then
+      reassigned, empty card disappears, name freed then reused, partial failure,
+      expired item → 410, 48-hour read rule, phone-width header
+- [ ] **NA-32** Trash view is a modal, not a page; if the list ever grows past a
+      screenful it should become its own page with paging
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -573,14 +583,18 @@ Git conventions:
 
 ---
 
-## 11. Stage B — upload server (BUILT 2026-11-27)
+## 11. Stage B — upload + delete/restore server (BUILT 2026-11-27/28)
 
 One process serves the site and the API: `app_v1\server.py` on `127.0.0.1:8000`.
 
 ```
 browser --POST /api/upload-->  server.py --writes--> ..\Storage\public_photos\786\<category>\<id>\
-browser --GET  /media/...-->   server.py --reads -->  the same folder
-browser --GET  /api/photos-->  server.py --lists -->  folder listing + photo.json
+browser --POST /api/delete-->  server.py --moves --> ..\Storage\Retention\786\<category>\<id>\
+browser --POST /api/restore->  server.py --moves --> ..\Storage\public_photos\786\<category>\<id>\
+browser --GET  /media/...-->   server.py --reads -->  a live photo folder
+browser --GET  /trash-media--> server.py --reads -->  a retention folder (thumbs only)
+browser --GET  /api/photos-->  server.py --lists -->  folder listing + photo.json + gallery.json
+browser --GET  /api/trash-->   server.py --lists -->  retention folders still inside 48 h
 ```
 
 - Root stays `app_v1\main`; the storage folder is never reachable from the browser.
@@ -590,14 +604,24 @@ browser --GET  /api/photos-->  server.py --lists -->  folder listing + photo.jso
   → original → strip JPEG GPS → `display.webp` + `thumb.webp` → `photo.json`
   **last** → atomic rename into place. A failed upload leaves nothing behind.
 - Limits: 500 MB, ~200 MP; JPEG/PNG/WebP/HEIC/TIFF/RAW; PDF/SVG rejected.
+  Description is optional, 300 characters, stored in `photo.json` and shown as text.
 - A copy failure keeps the upload and shows a placeholder (SP-21).
 - **One file at a time**; no drag-and-drop.
-- **Storage seam:** `storage.py` exposes save / list / file_path / delete. A blob
-  implementation replaces the disk one later, chosen by `STORAGE_BACKEND`.
+- **Delete:** `POST /api/delete` takes `{category, ids[]}`, one move per id, and
+  returns `{deleted[], failed[]}`; the cover is cleared as each id goes.
+- **Restore:** `POST /api/restore` takes `{id, category, name, description}`; the
+  id is kept, the folder moves back and `photo.json` is rewritten. A name clash is
+  `409`, an expired or missing item is `410`.
+- **Retention is read-time:** anything stamped more than 48 h ago is already gone
+  from `/api/trash` and `/trash-media`, even before the bytes are purged.
+- **Storage seam:** `storage.py` exposes save / list / file_path / trash / restore /
+  list_trash / purge_trash / gallery read-write. A blob implementation replaces the
+  disk one later, chosen by `STORAGE_BACKEND`.
 - **The folder is the truth; the JSON is the preferences.** The photo list is the
-  folder listing; `users_gallery.json` holds only what a folder cannot express
-  (display name, cover, category order). Never a second list.
-- **Not in Stage B:** login, quotas, moderation, delete/rename UI, cover picker,
+  folder listing; `Storage\public_photos\<owner>\gallery.json` holds only what a
+  folder cannot express (firstName, category labels, covers — SP-32). Never a
+  second list, and never in the site folder.
+- **Not in Stage B:** login, quotas, moderation, rename UI, cover picker,
   admin console.
 - **Testing from a phone:** set `HOST=0.0.0.0` plus a temporary inbound firewall
   rule for TCP 8000, then open `http://<laptop-ip>:8000`; anyone on that network
@@ -657,3 +681,4 @@ process, environment-configured, no framework.
 | 2026-11-26 | Session 11 (Codespaces): `git start`/`git end` protocol run only; no code or decisions changed; `cloud_handover.md` given front matter + Session 2 entry | First end-to-end run of the two-keyword workflow |
 | 2026-11-27 | Session 12 (Windows): Stage B built — `server.py`, `storage.py`, wizard, grid + lightbox; SP-19…SP-25; `OD-C6` decided, `OD-C7` partly; §4/§5/§8/§10/§11 rewritten; §0 rule 17; launchers moved to the repo root; `NA-24`/`NA-25` added | Upload works locally end to end; three copies per photo; `app_v1` is now exactly what deploys |
 | 2026-11-27 | Session 13 (Codespaces): delete/restore design — SP-26…SP-31; category deletion rejected; NA-26…NA-31 added, NA-20 narrowed to rename; **no automatic compression** in §0 rules 4, 9, 15 and §0.1; handover titles now date + time in UTC, every run a new entry | Owner wants undo safety without a scheduler, and a diary that is never shrunk behind his back |
+| 2026-11-28 | Session 14 (Windows): delete → 48 h Retention → restore built (SP-26/28 revised, SP-32/33 added); per-user `gallery.json` moved into `Storage\public_photos\<owner>\` and `users_gallery.json` deleted; description field (300 chars); header location title; bulk delete bar with tick boxes; restore tray + pre-filled form; `serve.ps1` deleted, `serve.cmd` now standalone; §4/§8/§11 rewritten | Owner approved the plan; one launcher and one place for per-user data |
