@@ -2,10 +2,52 @@
 environment: cloud
 machine: GitHub Codespaces (Linux)
 last_session: 2026-11-28
-sessions: 4
+sessions: 5
 ---
 
 # Cloud Handover — GitHub Codespaces
+
+## 2026-11-28 05:56 UTC — cloud — session 5
+
+### Session
+- Branch `main`, started at `c218781`; the owner committed and pushed Session 15's
+  work as `737c947` mid-session, so this entry sits on top of that commit.
+- Goal: move the homepage title onto the hero photo — it showed as a white bar.
+
+### Start here
+- **Session 15 is committed and pushed (`737c947`); session 16 is uncommitted.**
+- The homepage title now overlays the hero (top-left, white); other pages keep the
+  block head (`SP-34` revised).
+- Nothing visual was checked here; `NA-34` is the browser pass on Windows.
+
+### Changes
+- `app_v1/main/js/app.js` — hero title element; the block head is no longer added to
+  the homepage.
+- `app_v1/main/css/site.css` — `.hero-title`; `.hero-text` top padding 18 → 56 px.
+- `ai_support.md` — `SP-34` revised; §5 note; §9 Session 16; `NA-34` wording; §13 row.
+- `cloud_handover.md` — front matter and this entry.
+
+### Decisions
+- Homepage title over the hero, not a block above it → §2 SP-34 (revised)
+
+### Ideas parked
+- None new.
+
+### Open / unverified
+- White title over a light photo area is a guess until seen; if it disappears, give it
+  a darker shadow or a translucent strip.
+- `NA-33` (azure purge stub), `NA-19`, `NA-22`, `NA-24`, `NA-25` all stand.
+- §9 Session 14 gap remains, as agreed.
+
+### Next steps
+1. Commit + push session 16.
+2. On Windows: `NA-34` browser pass, including the homepage title contrast.
+3. Then start the Public Gallery page (`community.html`).
+
+### Git
+- Session start: `c218781` on main, 0 ahead / 0 behind origin
+- Work at close: 4 modified — left uncommitted for the owner
+- Commit/push: none by the AI
 
 ## 2026-11-28 05:37 UTC — cloud — session 4
 

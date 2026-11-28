@@ -160,7 +160,7 @@ SEO/marketing, multi-region.
 | SP-29 | **Upload has an optional Description** — max 300 characters, stored in `photo.json`, shown under the camera details in the lightbox | ACTIVE | 2026-11-27 |
 | SP-30 | **A cover is never empty while photos exist:** deleting the cover auto-reassigns to another photo; an empty category card disappears (already the render rule). The manual cover picker stays deferred (`NA-21`) | ACTIVE | 2026-11-27 |
 | SP-31 | ~~**The site header shows where you are**, as non-clickable text in the centre: "My Gallery", or the category label ("Landscape"). It is hidden on narrow phones if it cannot fit; the site name stays left and the nav right~~ | **RETIRED** 2026-11-28 — replaced by SP-34: one page head inside the content, header keeps only the site name | 2026-11-27 |
-| SP-34 | **One page head on every page, inside the content:** `[← back] Title [count]`. Homepage → "Homepage" (no back). My Gallery → "← Homepage · My Gallery · N photos". Category → "← All categories · label · N photos". Public Gallery / My Store / Events → "← Homepage · page name". The header carries only the site name (and nav when it exists); it never shows the location | ACTIVE | 2026-11-28 |
+| SP-34 | **One page head on every page, inside the content:** `[← back] Title [count]`. Homepage → the title is drawn **over the hero photo**, top-left, white with a shadow — no block above the photo (revised 2026-11-28). My Gallery → "← Homepage · My Gallery · N photos". Category → "← All categories · label · N photos". Public Gallery / My Store / Events → "← Homepage · page name". The header carries only the site name (and nav when it exists); it never shows the location | ACTIVE (revised) | 2026-11-28 |
 | SP-35 | **The upload/restore wizard never closes on a backdrop click.** A backdrop click shows "Click Cancel to close this window." inside the form and pulses Cancel once. Only Cancel and Esc close it, and they ask "Discard this photo?" (Keep editing / Discard) when the form differs from how it opened or a file is chosen; an untouched form closes straight away; closing is blocked while a save is in flight | ACTIVE | 2026-11-28 |
 | SP-36 | **Errors appear under the field that caused them**, not at the bottom of the form: a duplicate name shows the server's sentence under Name, scrolls it into view, returns the cursor to Name and keeps the chosen file, so a rename plus Upload is all that is needed | ACTIVE | 2026-11-28 |
 | SP-32 | **Per-user data lives in storage, not in the site folder.** `Storage\public_photos\<owner>\gallery.json` holds `firstName`, `categories` and `cover`; the browser gets it from `/api/photos`, never as a static file. `main\data\site.json` keeps site-wide settings only | ACTIVE | 2026-11-28 |
@@ -307,8 +307,8 @@ Deferred until justified: Front Door, Log Analytics, microservices.
       SP-26/SP-28 revised; per-user `gallery.json` in storage (SP-32); one launcher
       (SP-33); `NA-26`…`NA-31` closed
 - [x] **One page head on every page** (2026-11-28): replaces the header centre
-      text (SP-31 retired → SP-34); wizard exit guard (SP-35); inline field
-      errors (SP-36)
+      text (SP-31 retired → SP-34); homepage title sits over the hero; wizard exit
+      guard (SP-35); inline field errors (SP-36)
 - [ ] Real login for other users (`OD-I`), records (`OD-R`), upload rules (`OD-C7`)
 - [ ] Host bake-off (`OD-H`), storage account, publish script, budget alert, launch
 
@@ -553,6 +553,21 @@ Git conventions:
 - **Close-out:** `cloud_handover.md` Session 4; `NA-33` (azure purge stub) and
   `NA-34` (browser check) added; `NA-27` corrected; §5 ticked. No commit or push.
 
+### 2026-11-28 05:56 UTC — Session 16: Codespaces — homepage title over the hero
+- **Environment:** same codespace, started at `c218781`; the owner committed and
+  pushed Session 15's work as `737c947` mid-session, so this fix sits on top of it.
+  No browser here.
+- **Problem:** the homepage head was a normal block above the hero, so it showed as a
+  white bar and pushed the photo down.
+- **Fix:** the title is now drawn over the hero photo — top-left, white with a soft
+  shadow, inside the hero; the centred tagline moved from 18 px to 56 px to clear it.
+  Every other page keeps the block head. `SP-34` revised.
+- **Files:** `app_v1/main/js/app.js` (hero title), `app_v1/main/css/site.css`
+  (`.hero-title`, `.hero-text` padding).
+- **Verified:** `node --check` passes; no visual check here (`NA-34`).
+- **Close-out:** `cloud_handover.md` Session 5; §13 row; `NA-34` wording updated.
+  No commit or push.
+
 ---
 
 ## 10. Next actions
@@ -602,8 +617,9 @@ Git conventions:
       document `TRASH_RETENTION_HOURS` (default 48) in §11 and the README
 - [ ] **NA-34** Browser check on Windows of the three UI fixes: backdrop click
       never closes the wizard, the discard prompt appears only when dirty, the
-      page head matches on Homepage / My Gallery / category / inner pages, and a
-      duplicate name shows under the Name field with the file kept
+      page head matches on My Gallery / category / inner pages, the Homepage title
+      sits over the hero photo, and a duplicate name shows under the Name field
+      with the file kept
 - [ ] **NA-14** Confirm or recover the 4 missing photos. The old `storage_account`
       folder was deleted on 2026-11-25, so recovery is now unlikely — record the loss
 - [ ] **NA-3** Agree the component list for the four sections
@@ -721,3 +737,4 @@ process, environment-configured, no framework.
 | 2026-11-27 | Session 13 (Codespaces): delete/restore design — SP-26…SP-31; category deletion rejected; NA-26…NA-31 added, NA-20 narrowed to rename; **no automatic compression** in §0 rules 4, 9, 15 and §0.1; handover titles now date + time in UTC, every run a new entry | Owner wants undo safety without a scheduler, and a diary that is never shrunk behind his back |
 | 2026-11-28 | Session 14 (Windows): delete → 48 h Retention → restore built (SP-26/28 revised, SP-32/33 added); per-user `gallery.json` moved into `Storage\public_photos\<owner>\` and `users_gallery.json` deleted; description field (300 chars); header location title; bulk delete bar with tick boxes; restore tray + pre-filled form; `serve.ps1` deleted, `serve.cmd` now standalone; §4/§8/§11 rewritten | Owner approved the plan; one launcher and one place for per-user data |
 | 2026-11-28 | Session 15 (Codespaces): wizard backdrop guard with discard prompt (SP-35); one page head replaces the header centre text (SP-34, SP-31 retired); duplicate-name error inline under Name (SP-36); NA-33/NA-34 added; §9 Session 14 gap noted | Owner lost typed upload details to a stray backdrop click, and wanted one title style on every page |
+| 2026-11-28 | Session 16 (Codespaces): homepage title moved over the hero photo (white, top-left); tagline cleared below it; SP-34 revised | The block head showed as a white bar and pushed the hero down |

@@ -154,6 +154,11 @@
     photo.alt = "";
     hero.appendChild(photo);
 
+    const heading = document.createElement("h2");
+    heading.className = "hero-title";
+    heading.textContent = PAGE_TITLES.home;
+    hero.appendChild(heading);
+
     if (Array.isArray(site.heroText) && site.heroText.length > 0) {
       const text = document.createElement("div");
       text.className = "hero-text";
@@ -181,7 +186,6 @@
       hero.appendChild(nav);
     }
 
-    main.appendChild(pageHead({ title: PAGE_TITLES.home }));
     main.appendChild(hero);
   }
 
